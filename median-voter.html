@@ -1,0 +1,2495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two candidates and the median voter</title>
+<style>
+  :root {
+    --bg: #FAFAFA;
+    --panel: #FFFFFF;
+    --border: #D0D0D0;
+    --text: #111111;
+    --text-2: #555555;
+    --hint: #999999;
+    --deemph: #707070;
+    --accent: #0072B2;
+    --on-accent: #FFFFFF;
+    --favorable: #0072B2;
+    --unfavorable: #B33E00;
+    --neutral: #5F5E5A;
+    --gold-ui: #B8860B;
+    --gold-text: #946B09;
+    --on-gold: #111111;
+    --structure-ink: #141414;
+    --structure-line: #8A8A8A;
+    --pA: #009E73;
+    --pB: #CC79A7;
+    --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --data-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  html[data-theme="dark"] {
+    --bg: #1A1A1A;
+    --panel: #2A2A2A;
+    --border: #3A3A3A;
+    --text: #F2F2F2;
+    --text-2: #B3B3B3;
+    --hint: #7A7A7A;
+    --deemph: #9A9A9A;
+    --accent: #7FC7EE;
+    --on-accent: #0A1E28;
+    --favorable: #7FC7EE;
+    --unfavorable: #F08A4B;
+    --neutral: #A8A6A0;
+    --gold-ui: #E0B23D;
+    --gold-text: #E0B23D;
+    --on-gold: #141414;
+    --structure-ink: #E8E8E8;
+    --structure-line: #7E7E7E;
+    --pA: #3FCFA0;
+    --pB: #E29FC4;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body-font);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  header { margin-bottom: 24px; }
+  h1 { font-size: 1.65rem; font-weight: 600; margin: 0 0 8px 0; line-height: 1.25; }
+  .standfirst { margin: 0 0 8px 0; color: var(--text-2); max-width: 70ch; }
+
+  .topbar {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    align-items: flex-end; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .group-label { display: block; font-size: 11px; color: var(--text-2); margin-bottom: 8px; }
+
+  [role="tablist"] { display: flex; flex-wrap: wrap; gap: 8px; }
+  [role="tab"] {
+    font: inherit; font-size: 0.95rem;
+    padding: 8px 16px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  [role="tab"][aria-selected="true"] {
+    border-color: var(--accent);
+    box-shadow: inset 0 -3px 0 var(--accent);
+    font-weight: 600;
+  }
+
+  .theme-toggle, .look-btn {
+    font: inherit; font-size: 0.85rem;
+    padding: 8px 16px;
+    background: var(--panel); color: var(--accent);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .theme-toggle { color: var(--text); }
+  .looks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+  button:focus-visible, input:focus-visible, h2[tabindex="-1"]:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---------- board ---------- */
+
+  .board {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 809px) { .board { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+    scroll-margin-top: 8px;
+  }
+  .card h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; }
+  .card p { margin: 0 0 8px 0; }
+  .card-sub { font-size: 0.92rem; color: var(--text-2); }
+
+  /* ---------- the policy line ---------- */
+
+  svg.line { display: block; width: 100%; height: auto; }
+  .line text { font-family: var(--body-font); fill: var(--text); }
+  .line .axis { stroke: var(--structure-ink); stroke-width: 2; }
+  .line .tick { stroke: var(--structure-ink); stroke-width: 1.5; }
+  .line .tl { font-family: var(--data-font); font-size: 12px; }
+  .line .voter { fill: var(--structure-ink); }
+  .line .voter-coin { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .line .cand-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .line .cand-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+  .line .cand-l { font-family: var(--data-font); font-size: 15px; font-weight: 700; }
+  .line .ghost { fill: none; stroke: var(--deemph); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .line .ghost-l { font-family: var(--data-font); font-size: 12px; fill: var(--deemph); }
+  .line .mid { stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .line .mid-l { font-size: 12px; fill: var(--text-2); }
+  .line .band-A { fill: color-mix(in srgb, var(--pA) 45%, var(--panel)); }
+  .line .band-B { fill: color-mix(in srgb, var(--pB) 45%, var(--panel)); }
+  .line .band-edge { fill: none; stroke: var(--structure-ink); stroke-width: 1; }
+  .line .band-l { font-size: 12px; fill: var(--text); stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+  .line .ctr { fill: var(--structure-ink); }
+  .line .ctr-hollow { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .line .ctr-bar { stroke: var(--structure-ink); stroke-width: 4; }
+  .line .ctr-l { font-size: 12px; fill: var(--text); }
+  .line .reg-win, .legend .reg-win { fill: none; stroke: var(--text-2); stroke-width: 2; }
+  .line .reg-part, .legend .reg-part { fill: none; stroke: var(--text-2); stroke-width: 2; stroke-dasharray: 4 4; }
+  .line .reg-lose, .legend .reg-lose { stroke: var(--structure-line); stroke-width: 1.5; stroke-dasharray: 1 3; }
+  .line .reg-pt, .legend .reg-pt { fill: var(--panel); stroke: var(--text-2); stroke-width: 1.5; }
+  .line .reg-l { font-size: 12px; fill: var(--text-2); }
+  .line .reg-pl { font-family: var(--data-font); font-size: 12px; fill: var(--text-2); }
+  .line .ring { fill: none; stroke: var(--gold-ui); stroke-width: 3; }
+  .line .ring-case { fill: none; stroke: var(--structure-ink); stroke-width: 1; }
+  .line .ring-l { font-size: 12px; fill: var(--gold-text); font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 0 0; font-size: 0.85rem; color: var(--text-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend svg { width: 14px; height: 14px; }
+  .legend .voter { fill: var(--structure-ink); }
+  .legend .voter-coin { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .legend .cand-A, .line .vote-A, .legend .vote-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .legend .cand-B, .line .vote-B, .legend .vote-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+  .legend .ctr { fill: var(--structure-ink); }
+  .legend .ctr-hollow { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .legend .ctr-bar { stroke: var(--structure-ink); stroke-width: 4; }
+  .legend .ghost { fill: none; stroke: var(--deemph); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .legend .ring { fill: none; stroke: var(--gold-ui); }
+  .line .ideal-A, .legend .ideal-A { fill: var(--panel); stroke: var(--pA); stroke-width: 3; }
+  .line .ideal-B, .legend .ideal-B { fill: var(--panel); stroke: var(--pB); stroke-width: 3; }
+  .line .dens-plain { fill: color-mix(in srgb, var(--structure-ink) 10%, var(--panel)); }
+  .line .dens-A, .legend .dens-A { fill: color-mix(in srgb, var(--pA) 45%, var(--panel)); }
+  .line .dens-B, .legend .dens-B { fill: color-mix(in srgb, var(--pB) 45%, var(--panel)); }
+  .line .dens-curve, .legend .dens-curve { fill: none; stroke: var(--structure-ink); stroke-width: 2; }
+  .line .tracked, .legend .tracked { fill: none; stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .line .ctr-drop { stroke: var(--structure-line); stroke-width: 1; stroke-dasharray: 2 3; }
+  .line .rank-l { font-family: var(--data-font); font-size: 12px; fill: var(--text-2); stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+  .slider-box { border: 1px solid var(--border); border-radius: 4px; padding: 8px 16px; margin: 8px 0 0 0; }
+  .slider-read { margin: 8px 0 0 0; font-size: 0.92rem; }
+  table.split { border-collapse: collapse; margin: 0 0 8px 0; font-size: 0.88rem; }
+  table.split caption { text-align: left; font-size: 0.85rem; color: var(--text-2); padding-bottom: 4px; }
+  table.split th, table.split td { border: 1px solid var(--border); padding: 4px; text-align: center; vertical-align: top; }
+  table.split tbody th, table.split thead th[scope="row"] { text-align: left; font-weight: 400; color: var(--text-2); font-size: 0.8rem; }
+  table.split td.pats { font-family: var(--data-font); font-size: 0.8rem; line-height: 1.6; white-space: nowrap; letter-spacing: 1px; }
+  table.split .win-A { background: color-mix(in srgb, var(--pA) 22%, var(--panel)); }
+  table.split .win-B { background: color-mix(in srgb, var(--pB) 22%, var(--panel)); }
+  .line-cap { margin: 8px 0 0 0; font-size: 0.85rem; color: var(--text-2); }
+  .result-badge { display: inline-flex; flex-direction: column; border: 1px solid var(--border); border-radius: 4px; padding: 8px 16px; margin: 0 0 8px 0; }
+  .result-badge .field-label { margin-bottom: 2px; }
+  .result-badge .rb-val { font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .result-badge svg { width: 14px; height: 14px; }
+  .result-badge .cand-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .result-badge .cand-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+
+  /* ---------- the vote count ---------- */
+
+  .table-scroll { overflow-x: auto; }
+  table.ws { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  table.ws caption { text-align: left; font-size: 0.85rem; color: var(--text-2); padding-bottom: 8px; }
+  table.ws th, table.ws td { border-bottom: 1px solid var(--border); padding: 8px; vertical-align: top; text-align: left; }
+  table.ws thead th { font-size: 11px; color: var(--text-2); font-weight: 400; }
+  table.ws tbody th { font-weight: 400; width: 52%; }
+  table.ws tbody tr:last-child th, table.ws tbody tr:last-child td { border-bottom: 0; }
+  .rf { display: block; font-family: var(--data-font); font-size: 0.76rem; color: var(--text-2); margin-top: 2px; }
+  .rv { font-family: var(--data-font); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .rv.unknown { color: var(--deemph); font-weight: 400; }
+  .rv.before { color: var(--deemph); font-weight: 400; }
+  td.fresh { box-shadow: inset 3px 0 0 var(--gold-ui); }
+
+  /* ---------- case card ---------- */
+
+  .case-group { font-size: 0.85rem; color: var(--text-2); margin: 0 0 8px 0; }
+  .field { margin: 0 0 8px 0; }
+  .field-label { display: block; font-size: 11px; color: var(--text-2); margin-bottom: 2px; }
+  .data { font-family: var(--data-font); font-variant-numeric: tabular-nums; }
+
+  /* ---------- panel ---------- */
+
+  .step-label { font-size: 11px; color: var(--text-2); margin: 0 0 8px 0; }
+  .step-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; }
+  .step-body p { margin: 0 0 8px 0; }
+  .step-body .stmt { border: 1px solid var(--border); border-left: 4px solid var(--structure-line); border-radius: 4px; padding: 8px 16px; margin: 0 0 16px 0; }
+  .step-body .stmt-head { display: block; font-weight: 600; margin-bottom: 8px; }
+  .step-body ul.recap, .step-body ol.recap { margin: 0 0 8px 0; padding-left: 24px; }
+  .step-body ul.recap li, .step-body ol.recap li { margin-bottom: 8px; }
+  .nav { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  .dots { display: flex; gap: 0; margin-left: auto; flex-wrap: wrap; }
+  /* each dot is a 24px button, so it is easy to hit, with the visible dot drawn inside it */
+  .dot { width: 24px; height: 24px; padding: 0; border: none; background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .dot:hover::before { background: var(--text-2); }
+  .dot.on::before { background: var(--accent); width: 10px; height: 10px; }
+
+  .btn {
+    font: inherit; font-size: 0.95rem; padding: 8px 16px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .btn:disabled { color: var(--deemph); cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .btn.primary:disabled { background: var(--panel); border-color: var(--border); color: var(--deemph); font-weight: 400; }
+
+  .cgroup { border: 1px solid var(--border); border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+  .cgroup-head { font-size: 0.9rem; font-weight: 600; margin: 0 0 8px 0; }
+  .ctrl { margin-bottom: 16px; }
+  .ctrl:last-child { margin-bottom: 0; }
+  .ctrl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  .ctrl-head label { font-size: 0.9rem; font-weight: 600; }
+  .ctrl-val { font-family: var(--data-font); font-variant-numeric: tabular-nums; font-weight: 600; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+  .scale { display: flex; justify-content: space-between; font-family: var(--data-font); font-size: 0.72rem; color: var(--text-2); margin-top: 2px; }
+  .cnote { margin: 8px 0 16px 0; font-size: 0.85rem; color: var(--text-2); }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+  .verdict-box { border: 1px solid var(--border); border-radius: 4px; padding: 8px 16px; margin-bottom: 16px; }
+  .verdict-box .who { font-size: 11px; color: var(--text-2); margin: 0 0 2px 0; }
+  .verdict { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; }
+  .why { margin: 0 0 8px 0; font-size: 0.92rem; }
+  .why:last-child { margin-bottom: 0; }
+
+  .chip {
+    font: inherit; font-size: 0.9rem; padding: 8px 16px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .chip[aria-pressed="true"] {
+    border-color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); font-weight: 600;
+  }
+  .chip.small { font-size: 0.82rem; padding: 8px 16px; }
+  .chip .x { font-family: var(--data-font); color: var(--text-2); margin-left: 4px; }
+  .chips-group { margin-bottom: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips-desc { font-size: 0.82rem; color: var(--text-2); margin: 0 0 8px 0; }
+  .chip .done-mark { font-family: var(--data-font); color: var(--favorable); margin-left: 4px; }
+
+  .task { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+  .task-q { font-weight: 600; margin: 0 0 8px 0; }
+  .opts { display: flex; flex-direction: column; gap: 8px; }
+  .opt {
+    font: inherit; font-size: 0.95rem; text-align: left;
+    padding: 8px 16px; background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .opt.num { font-family: var(--data-font); font-variant-numeric: tabular-nums; }
+  .opt:hover { border-color: var(--accent); }
+  .opt[aria-pressed="true"] { border: 2px solid var(--accent); padding: 7px 15px; font-weight: 600; }
+  .opt[aria-disabled="true"] { cursor: default; color: var(--deemph); }
+  .opt[aria-disabled="true"]:hover { border-color: var(--border); }
+  .opt.chosen[aria-disabled="true"] { color: var(--text); border: 2px solid var(--gold-ui); padding: 7px 15px; }
+
+  .result-note {
+    margin: 8px 0 0 0; padding: 8px 16px; border-radius: 4px;
+    border: 1px solid var(--border); font-size: 0.92rem;
+  }
+  .result-note.ok { box-shadow: inset 4px 0 0 var(--favorable); }
+  .result-note.no { box-shadow: inset 4px 0 0 var(--unfavorable); }
+  .result-note .head { font-weight: 600; }
+  .result-note.ok .head { color: var(--favorable); }
+  .result-note.no .head { color: var(--unfavorable); }
+
+  .finished { margin-top: 16px; padding: 8px 16px; border: 2px solid var(--gold-ui); border-radius: 4px; font-size: 0.92rem; }
+  .finished p { margin: 0 0 8px 0; }
+  .finished p:last-child { margin-bottom: 0; }
+  .score { font-family: var(--data-font); font-size: 0.85rem; color: var(--text-2); margin: 16px 0 0 0; }
+
+  .back-btn {
+    position: fixed; right: 16px; bottom: 16px; z-index: 10;
+    font: inherit; font-size: 0.9rem; font-weight: 600;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent);
+  }
+
+  footer { margin-top: 32px; font-size: 0.82rem; color: var(--text-2); max-width: 70ch; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .opt, .btn, [role="tab"], .chip { transition: border-color 120ms ease, background-color 120ms ease; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Two candidates and the median voter</h1>
+    <p class="standfirst">
+      Two candidates who care only about winning choose positions on a policy line, and every voter votes for
+      the closer one. Where do the candidates end up? The guided walkthrough works through one small electorate
+      step by step, from counting votes to the equilibrium, and then adds a tenth voter to see what an even number
+      of voters changes. Explore lets you build your own electorate, move the candidates, and check where a
+      candidate can win and whether a pair of positions is an equilibrium. Practice has thirteen cases in seven groups,
+      including voters spread evenly and a candidate who cares about policy.
+    </p>
+    <p class="standfirst">
+      Throughout, voters have symmetric preferences, so each votes for the closer candidate, and a voter exactly
+      halfway between the candidates flips a coin. A candidate gets 1 for winning and 0 for losing, and a tied
+      vote is settled by a coin toss. When coin flips can decide the election, what a candidate cares about is its
+      probability of winning, which is its expected payoff (1 &times; the probability of winning + 0 &times; the probability of losing).
+    </p>
+  </header>
+
+  <div class="topbar">
+    <div>
+      <span class="group-label" id="modeLabel">Mode</span>
+      <div role="tablist" aria-labelledby="modeLabel" id="tabs">
+        <button role="tab" id="tab-guided" aria-selected="true" aria-controls="guidedPanel" type="button">Guided walkthrough</button>
+        <button role="tab" id="tab-explore" aria-selected="false" aria-controls="explorePanel" tabindex="-1" type="button">Explore</button>
+        <button role="tab" id="tab-practice" aria-selected="false" aria-controls="practicePanel" tabindex="-1" type="button">Practice</button>
+      </div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button">Switch to dark mode</button>
+  </div>
+
+  <div class="board">
+
+    <!-- ============ content column ============ -->
+    <div class="col">
+
+      <section class="card" id="caseCard" aria-labelledby="caseTitle" hidden>
+        <h2 id="caseTitle"></h2>
+        <p class="case-group" id="caseGroup"></p>
+        <div id="caseBody"></div>
+      </section>
+
+      <section class="card" id="lineCard" aria-labelledby="lineTitle">
+        <h2 id="lineTitle">The policy line</h2>
+        <p class="card-sub" id="lineSub"></p>
+        <div class="result-badge" id="resultBadge" hidden><span class="field-label">Election result</span><span class="rb-val" id="resultVal"></span></div>
+        <svg class="line" id="line" viewBox="0 0 400 336" aria-hidden="true" focusable="false"></svg>
+        <div id="stepCtrl"></div>
+        <div class="legend" id="legend" aria-hidden="true"></div>
+        <p class="line-cap" id="lineCap"></p>
+      </section>
+
+      <section class="card" id="countCard" aria-labelledby="countTitle">
+        <h2 id="countTitle">The vote count</h2>
+        <div class="table-scroll">
+          <table class="ws">
+            <caption id="countCaption">Who votes for whom, and who wins.</caption>
+            <thead id="countHead"></thead>
+            <tbody id="countBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ the panel ============ -->
+    <div>
+
+      <section class="card" id="guidedPanel" role="tabpanel" aria-labelledby="tab-guided">
+        <p class="step-label" id="stepLabel"></p>
+        <div aria-live="polite" id="stepLive">
+          <h2 class="step-title" id="stepTitle" tabindex="-1"></h2>
+          <div class="step-body" id="stepBody"></div>
+          <div class="looks" id="stepLook"></div>
+        </div>
+        <div class="nav" id="guidedNav">
+          <button class="btn" type="button" id="prevBtn">Back</button>
+          <button class="btn primary" type="button" id="nextBtn">Next</button>
+          <div class="dots" id="dots" role="group" aria-label="Go to a step"></div>
+        </div>
+      </section>
+
+      <section class="card" id="explorePanel" role="tabpanel" aria-labelledby="tab-explore" hidden>
+        <h2 id="exploreTitle" tabindex="-1">Build an electorate and move the candidates</h2>
+        <div class="verdict-box" aria-live="polite" id="verdictBox">
+          <p class="who">What happens</p>
+          <p class="verdict" id="verdict"></p>
+          <p class="why" id="vWhy"></p>
+          <p class="why" id="vCoins" hidden></p>
+          <div class="row-btns" id="countWaysRow" hidden><button class="btn" type="button" id="waysBtn" aria-expanded="false">Show the count</button></div>
+          <div id="waysTable" hidden></div>
+          <p class="why" id="vMove" hidden></p>
+        </div>
+
+        <div class="cgroup">
+          <p class="cgroup-head">The candidates</p>
+          <div class="ctrl">
+            <div class="ctrl-head"><label for="sA">Candidate A&rsquo;s position</label><span class="ctrl-val" id="oA"></span></div>
+            <input type="range" id="sA" min="0" max="10" step="0.1" value="3.5">
+            <div class="scale"><span>0</span><span>10</span></div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-head"><label for="sB">Candidate B&rsquo;s position</label><span class="ctrl-val" id="oB"></span></div>
+            <input type="range" id="sB" min="0" max="10" step="0.1" value="8.5">
+            <div class="scale"><span>0</span><span>10</span></div>
+          </div>
+          <div class="row-btns">
+            <button class="btn" type="button" id="startBtn">Set these as the starting positions</button>
+            <button class="btn" type="button" id="backBtn2" hidden>Back to the starting positions</button>
+            <button class="btn" type="button" id="clearStartBtn" hidden>Clear the starting positions</button>
+          </div>
+          <p class="cnote">Once you set starting positions, they stay on the policy line and in the vote count. Moving one candidate puts the other back at its starting position, so every move you try is a unilateral deviation, and the box at the top says whether it pays.</p>
+        </div>
+
+        <div class="cgroup">
+          <p class="cgroup-head">The voters</p>
+          <span class="group-label" id="presetLabel">Start from</span>
+          <div class="chips" role="group" aria-labelledby="presetLabel" id="presets"></div>
+          <p class="cnote">The last three are electorates from the walkthrough, and choosing one also puts the candidates where the walkthrough had them.</p>
+          <div class="ctrl" style="margin-top: 16px;">
+            <div class="ctrl-head"><label for="sV">Ideal point of a new voter</label><span class="ctrl-val" id="oV"></span></div>
+            <input type="range" id="sV" min="0" max="10" step="0.5" value="5">
+            <div class="scale"><span>0</span><span>10</span></div>
+          </div>
+          <div class="row-btns"><button class="btn" type="button" id="addVoter">Add a voter here</button></div>
+          <p class="cnote" id="voterNote"></p>
+          <span class="group-label" id="voterListLabel">Voters (select one to remove it)</span>
+          <div class="chips" role="group" aria-labelledby="voterListLabel" id="voterList"></div>
+        </div>
+
+        <div class="cgroup">
+          <p class="cgroup-head">Show and check</p>
+          <div class="chips" role="group" aria-label="Show on the policy line">
+            <button type="button" class="chip small" id="tMedian" aria-pressed="false">The median</button>
+            <button type="button" class="chip small" id="tMean" aria-pressed="false">The mean</button>
+            <button type="button" class="chip small" id="tMiddle" aria-pressed="false">The middle of the policy space</button>
+            <button type="button" class="chip small" id="tMode" aria-pressed="false">The mode</button>
+            <button type="button" class="chip small" id="tRanks" aria-pressed="false">Number the voters</button>
+            <button type="button" class="chip small" id="tRegions" aria-pressed="false">B’s regions, given A</button>
+          </div>
+          <div class="row-btns"><button class="btn" type="button" id="checkBtn">Check for an equilibrium</button></div>
+          <div class="verdict-box" id="vCheckBox" style="margin: 8px 0 0 0;" hidden><p class="who">Equilibrium check</p><p class="why" id="vCheck"></p></div>
+          <p class="cnote">Try a problem yourself before you use these. &ldquo;B’s regions&rdquo; and the equilibrium check give the answers away.</p>
+        </div>
+      </section>
+
+      <section class="card" id="practicePanel" role="tabpanel" aria-labelledby="tab-practice" hidden>
+        <h2 id="practiceTitle" tabindex="-1">Practice</h2>
+        <p class="cnote">Thirteen cases in seven groups, each with its own voters. Most cases ask five to seven questions in the same order: find the median, count the votes, decide whether any indifferent voters are pivotal and, where they are, work out a probability of winning, check some moves, find the challenger’s winning region, and decide whether a pair of positions is an equilibrium. The cases with voters spread evenly ask about vote shares, and the last case has a candidate who cares about policy. A case is marked with a check once you answer every question right the first time.</p>
+        <div id="casePicker"></div>
+        <div class="task" id="t1">
+          <p class="task-q" id="q1"></p>
+          <div class="opts" id="o1"></div><div id="f1"></div>
+        </div>
+        <div class="task" id="t2" hidden>
+          <p class="task-q" id="q2"></p>
+          <div class="opts" id="o2"></div><div id="f2"></div>
+        </div>
+        <div class="task" id="tpiv" hidden>
+          <p class="task-q" id="qpiv"></p>
+          <div class="opts" id="opiv"></div><div id="fpiv"></div>
+        </div>
+        <div class="task" id="t2p" hidden>
+          <p class="task-q" id="q2p"></p>
+          <div class="opts" id="o2p"></div><div id="f2p"></div>
+        </div>
+        <div class="task" id="t3" hidden>
+          <p class="task-q" id="q3"></p>
+          <p class="cnote">Select every move that helps, or &ldquo;None of them.&rdquo;</p>
+          <div class="opts" id="o3"></div>
+          <div class="nav"><button class="btn primary" type="button" id="check3">Check</button></div>
+          <div id="f3"></div>
+        </div>
+        <div class="task" id="t4" hidden>
+          <p class="task-q" id="q4"></p>
+          <div class="opts" id="o4"></div><div id="f4"></div>
+        </div>
+        <div class="task" id="t5" hidden>
+          <p class="task-q" id="q5"></p>
+          <div class="opts" id="o5"></div><div id="f5"></div>
+        </div>
+        <div class="finished" id="caseDone" hidden></div>
+        <div class="nav"><button class="btn primary" type="button" id="nextCase" hidden>Next case</button></div>
+        <p class="score" id="score"></p>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    Accompanies the Week 2 notes on the median voter (majority rule and the median, just enough game theory,
+    the Hotelling&ndash;Downs model, the classroom simulation, and what the electoral theorem assumes). The
+    electorates in the walkthrough, the explore presets and the practice cases are new, and none of them appears
+    in the notes or the problem bank. Policy-motivated candidates who are unsure where the median voter is (the
+    Calvert&ndash;Wittman model) are the subject of a separate tool.
+  </footer>
+
+  <button class="back-btn" type="button" id="backBtn" hidden>Back to the steps</button>
+  <div class="sr-only" role="status" aria-live="polite" id="live"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var liveEl = document.getElementById("live");
+  function say(msg) { liveEl.textContent = ""; setTimeout(function () { liveEl.textContent = msg; }, 30); }
+  function $(id) { return document.getElementById(id); }
+
+  /* ================= the model =================
+     Positions are held as integers in units of 1/40, so every comparison is exact:
+     voters sit on a 0.5 grid, candidates on a 0.1 grid, and every midpoint and
+     deviation test point lands on a whole unit. */
+
+  var U = 40, TOP = 10 * U;
+  function u(x) { return Math.round(x * U); }
+  function num(n) { var s = (n / U).toFixed(3); return s.replace(/\.?0+$/, ""); }
+
+  function gcd(a, b) { while (b) { var t = a % b; a = b; b = t; } return a; }
+  function frac(n, d) { var g = gcd(Math.abs(n), d) || 1; return { n: n / g, d: d / g }; }
+  function cmp(f, g) { return f.n * g.d - g.n * f.d; }
+  var WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+  function cnt(n, one, many) { return (n <= 10 ? WORDS[n] : String(n)) + " " + (n === 1 ? one : many); }
+  function cap1(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  function fstr(f) { return f.d === 1 ? String(f.n) : f.n + "/" + f.d; }
+  function comb(n, k) { var r = 1; for (var i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); }
+
+  function split(vs, a, b) {
+    var sa = 0, sb = 0, k = 0;
+    vs.forEach(function (z) {
+      var da = Math.abs(z - a), db = Math.abs(z - b);
+      if (da < db) sa++; else if (db < da) sb++; else k++;
+    });
+    return { sa: sa, sb: sb, k: k };
+  }
+  /* A's probability of winning, which is also A's payoff. Indifferent voters flip coins;
+     a tied vote is settled by a coin toss. Candidates in the same place: every voter is indifferent. */
+  function chanceA(vs, a, b) {
+    if (a === b) return { n: 1, d: 2 };
+    var s = split(vs, a, b), n = 0, d = Math.pow(2, s.k + 1);
+    for (var j = 0; j <= s.k; j++) {
+      var A = s.sa + j, B = s.sb + s.k - j;
+      n += comb(s.k, j) * (A > B ? 2 : A === B ? 1 : 0);
+    }
+    return frac(n, d);
+  }
+  /* Whether the indifferent voters are pivotal: whether their votes can change who wins.
+     sure is the candidate who wins whatever they do, when they aren't pivotal. */
+  function pivInfo(vs, a, b) {
+    var s = split(vs, a, b), win = 0, lose = 0;
+    for (var j = 0; j <= s.k; j++) { var A = s.sa + j, B = s.sb + s.k - j; if (A > B) win++; else if (A < B) lose++; }
+    var all = s.k + 1;
+    return { k: s.k, sa: s.sa, sb: s.sb, pivotal: s.k > 0 && win !== all && lose !== all, sure: win === all ? "A" : lose === all ? "B" : null };
+  }
+  function chanceB(vs, a, b) { var f = chanceA(vs, a, b); return { n: f.d - f.n, d: f.d }; }
+  function chance(vs, a, b, who) { return who === "A" ? chanceA(vs, a, b) : chanceB(vs, a, b); }
+
+  function sorted(vs) { return vs.slice().sort(function (x, y) { return x - y; }); }
+  function median(vs) {
+    var s = sorted(vs), n = s.length;
+    return n % 2 ? [s[(n - 1) / 2], s[(n - 1) / 2]] : [s[n / 2 - 1], s[n / 2]];
+  }
+  function meanU(vs) { var t = 0; vs.forEach(function (z) { t += z; }); return t / vs.length; }
+  function meanText(vs) {
+    var m = meanU(vs) / U, r = Math.round(m * 100) / 100;
+    var s = r.toFixed(2).replace(/\.?0+$/, "");
+    return Math.abs(m - r) < 1e-9 ? s : "about " + s;
+  }
+
+  /* Every position where a mover's result can change, given the other candidate at o:
+     the ends of the line, o itself, and each 2z - o. Between two of these the result is
+     constant, so these points and the midpoints between them cover every possible move. */
+  function testPoints(vs, o) {
+    var set = {}; set[0] = 1; set[TOP] = 1; set[o] = 1;
+    vs.forEach(function (z) { var x = 2 * z - o; if (x >= 0 && x <= TOP) set[x] = 1; });
+    var bps = Object.keys(set).map(Number).sort(function (x, y) { return x - y; });
+    var pts = bps.map(function (x) { return { x: x, lo: x, hi: x, open: false }; });
+    for (var i = 0; i + 1 < bps.length; i++) pts.push({ x: (bps[i] + bps[i + 1]) / 2, lo: bps[i], hi: bps[i + 1], open: true });
+    return pts;
+  }
+  function payoffAt(vs, a, b, who, x) { return who === "A" ? chanceA(vs, x, b) : chanceB(vs, a, x); }
+  /* The best a unilateral move can do, and an example position (on the 0.1 grid) that does it,
+     preferring the median, then the position nearest the median. */
+  function bestMove(vs, a, b, who) {
+    var other = who === "A" ? b : a, pts = testPoints(vs, other), best = null;
+    pts.forEach(function (p) { var f = payoffAt(vs, a, b, who, p.x); if (!best || cmp(f, best) > 0) best = f; });
+    var med = median(vs)[0], cands = [];
+    pts.forEach(function (p) {
+      if (cmp(payoffAt(vs, a, b, who, p.x), best) !== 0) return;
+      if (!p.open) { if (p.x % 4 === 0) cands.push(p.x); return; }
+      for (var g = Math.ceil((p.lo + 1) / 4) * 4; g < p.hi; g += 4) cands.push(g);
+    });
+    cands = cands.filter(function (x) { return cmp(payoffAt(vs, a, b, who, x), best) === 0; });
+    cands.sort(function (x, y) { return Math.abs(x - med) - Math.abs(y - med) || x - y; });
+    return { best: best, example: cands.length ? cands[0] : null };
+  }
+  function eqVerdict(vs, a, b) {
+    var mA = bestMove(vs, a, b, "A"), mB = bestMove(vs, a, b, "B");
+    var dA = cmp(mA.best, chanceA(vs, a, b)) > 0, dB = cmp(mB.best, chanceB(vs, a, b)) > 0;
+    return { v: !dA && !dB ? "yes" : dA && dB ? "both" : dA ? "A" : "B", A: mA, B: mB, dA: dA, dB: dB };
+  }
+  /* The mover's result at every position, given the other candidate fixed at a: a list of
+     segments {lo, hi, point, f}. The mover is B unless "A" is given. */
+  function moverChance(vs, a, x, mover) { return mover === "A" ? chanceA(vs, x, a) : chanceB(vs, a, x); }
+  function regions(vs, a, mover) {
+    var set = {}; set[0] = 1; set[TOP] = 1; set[a] = 1;
+    vs.forEach(function (z) { var x = 2 * z - a; if (x >= 0 && x <= TOP) set[x] = 1; });
+    var bps = Object.keys(set).map(Number).sort(function (x, y) { return x - y; }), segs = [];
+    /* A's own position is kept as a point of its own, so "the candidates tie" is never merged away. */
+    function add(lo, hi, point, f) {
+      var last = segs[segs.length - 1], atA = point && lo === a;
+      if (last && !atA && !last.atA && cmp(last.f, f) === 0) { last.hi = hi; last.point = false; last.closedHi = point; return; }
+      segs.push({ lo: lo, hi: hi, point: point, f: f, closedLo: point, closedHi: point, atA: atA });
+    }
+    bps.forEach(function (x, i) {
+      add(x, x, true, moverChance(vs, a, x, mover));
+      if (i + 1 < bps.length) add(x, bps[i + 1], false, moverChance(vs, a, (x + bps[i + 1]) / 2, mover));
+    });
+    return segs;
+  }
+  function winIntervals(vs, a) {
+    return regions(vs, a).filter(function (s) { return s.f.n === s.f.d && !s.point; });
+  }
+  function regionText(vs, a, mover) {
+    var m = mover === "A" ? "A" : "B", f = m === "A" ? "B" : "A", segs = regions(vs, a, m), out = [];
+    segs.forEach(function (s) {
+      var where;
+      if (s.point) where = "at " + num(s.lo);
+      else where = (s.closedLo ? "from " + num(s.lo) : "strictly above " + num(s.lo)) + (s.closedHi ? " to " + num(s.hi) : " and below " + num(s.hi));
+      if (!s.point && s.lo === 0 && s.closedLo) where = (s.closedHi ? "up to " + num(s.hi) : "below " + num(s.hi));
+      if (!s.point && s.hi === TOP && s.closedHi) where = (s.closedLo ? "from " + num(s.lo) + " up" : "above " + num(s.lo));
+      var what = s.f.n === s.f.d ? m + " wins for sure" : s.f.n === 0 ? m + " loses for sure" : m + " wins with probability " + fstr(s.f);
+      if (s.point && s.lo === a) what = "the candidates are in the same place and " + m + " wins with probability 1/2";
+      out.push(what + " " + where);
+    });
+    var wins = segs.filter(function (s) { return !s.point && s.f.n === s.f.d; });
+    var tail = wins.length === 1 ? " So " + m + "’s winning region is " + (wins[0].closedLo ? "from " + num(wins[0].lo) : "strictly above " + num(wins[0].lo)) + (wins[0].closedHi ? " to " + num(wins[0].hi) : " and below " + num(wins[0].hi)) + "." :
+      wins.length === 0 ? " So " + m + " has no winning region." : "";
+    return "Given " + f + " at " + num(a) + ", " + out.join(", ") + "." + tail;
+  }
+  function intervalText(lo, hi) { return "Strictly between " + num(lo) + " and " + num(hi); }
+  /* The election result in words: who wins, a tie, or coin flips with uneven chances. */
+  function resultText(vs, a, b) {
+    var f = chanceA(vs, a, b), g = { n: f.d - f.n, d: f.d };
+    if (f.n === f.d) return { text: "A wins", short: "A wins", winner: "A" };
+    if (f.n === 0) return { text: "B wins", short: "B wins", winner: "B" };
+    if (a === b) return { text: "Every voter is indifferent. Each wins with probability 1/2", short: "Coin flips (1/2 each)", winner: null };
+    var sp = split(vs, a, b);
+    if (f.n * 2 === f.d && sp.k === 0) return { text: "Tied. Each wins with probability 1/2", short: "Tied (1/2 each)", winner: null };
+    if (f.n * 2 === f.d) return { text: "Coin flips decide. Each wins with probability 1/2", short: "Coin flips (1/2 each)", winner: null };
+    return { text: "Coin flips decide. A wins with probability " + fstr(f) + ", B with " + fstr(g), short: "Coin flips (A " + fstr(f) + ", B " + fstr(g) + ")", winner: null };
+  }
+  /* ================= many voters: continuous distributions =================
+     Each distribution lives on the 0-10 line (positions in line units here, not 1/40s).
+     f is the density, F the share of voters at or below x. A candidate's vote share is the
+     area on its side of the midpoint. Shares within 1e-9 of one half count as a tie. */
+  function erfApprox(x) {   /* Abramowitz and Stegun 7.1.26, error below 1.5e-7; odd by construction */
+    var sgn = x < 0 ? -1 : 1; x = Math.abs(x);
+    var t = 1 / (1 + 0.3275911 * x);
+    var y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return sgn * y;
+  }
+  function Phi(z) { return z === 0 ? 0.5 : 0.5 * (1 + erfApprox(z / Math.SQRT2)); }
+  var NORM = { mu: 6, s: 1.3, lo: 2, hi: 10 };
+  NORM.Z = Phi((NORM.hi - NORM.mu) / NORM.s) - Phi((NORM.lo - NORM.mu) / NORM.s);
+  var TRI = { c: 1.55 };
+  var DENS = {
+    uniform: { t: "Uniform", desc: "uniform from 2 to 9", median: 5.5, mean: 5.5,
+      f: function (x) { return x >= 2 && x <= 9 ? 1 / 7 : 0; },
+      F: function (x) { return Math.min(1, Math.max(0, (x - 2) / 7)); } },
+    normal: { t: "Normal", desc: "normal, centered at 6", median: 6, mean: 6,
+      f: function (x) { if (x < NORM.lo || x > NORM.hi) return 0; var z = (x - NORM.mu) / NORM.s; return Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI) / NORM.s / NORM.Z; },
+      F: function (x) { if (x <= NORM.lo) return 0; if (x >= NORM.hi) return 1; return (Phi((x - NORM.mu) / NORM.s) - Phi((NORM.lo - NORM.mu) / NORM.s)) / NORM.Z; } },
+    skew: { t: "Skewed", desc: "skewed, bunched toward the left with a long tail to the right", median: 3.5, mean: 3.85,
+      f: function (x) { if (x < 0 || x > 10) return 0; return x < TRI.c ? 2 * x / (10 * TRI.c) : 2 * (10 - x) / (10 * (10 - TRI.c)); },
+      F: function (x) { if (x <= 0) return 0; if (x >= 10) return 1; return x < TRI.c ? x * x / (10 * TRI.c) : 1 - (10 - x) * (10 - x) / (10 * (10 - TRI.c)); } }
+  };
+  ["uniform", "normal", "skew"].forEach(function (k) {
+    var d = DENS[k], m = 0; for (var i = 0; i <= 1000; i++) m = Math.max(m, d.f(i / 100)); d.fmax = m; d.id = k;
+  });
+  /* A's vote share given positions in 1/40 units */
+  function densShareA(d, a, b) {
+    if (a === b) return 0.5;
+    var Fm = d.F((a + b) / 2 / U);
+    return a < b ? Fm : 1 - Fm;
+  }
+  function pct(x) { var r = Math.round(x * 1000) / 10; return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)) + "%"; }
+  function densResult(d, a, b) {
+    var sa = densShareA(d, a, b);
+    if (a === b) return { text: "Every voter is indifferent. Each wins with probability 1/2", short: "Coin flips (1/2 each)", winner: null, f: { n: 1, d: 2 } };
+    if (Math.abs(sa - 0.5) < 1e-9) return { text: "Tied. Each wins with probability 1/2", short: "Tied (1/2 each)", winner: null, f: { n: 1, d: 2 } };
+    return sa > 0.5 ? { text: "A wins", short: "A wins", winner: "A", f: { n: 1, d: 1 } } : { text: "B wins", short: "B wins", winner: "B", f: { n: 0, d: 1 } };
+  }
+
+  /* The policy line for a continuous distribution: the curve, its two shaded areas once the
+     vote is counted, the median and mean, and the candidates. */
+  function drawDens(sc, sub) {
+    var d = typeof sc.dens === "string" ? DENS[sc.dens] : sc.dens, p = [], key = [], both = sc.a !== null && sc.b !== null;
+    var bands = !!sc.count && both, showMid = bands && sc.a !== sc.b, mid = showMid ? (sc.a + sc.b) / 2 : null;
+    var H = 104, base = AXY - 1, C = sc.centers || {};
+    function Y(x) { return base - d.f(x) / d.fmax * H; }
+    function area(x0, x1, cls) {
+      var pts = [[X(x0 * U), base]], n = Math.max(2, Math.ceil((x1 - x0) / 0.02));
+      for (var i = 0; i <= n; i++) { var x = x0 + (x1 - x0) * i / n; pts.push([X(x * U), Y(x)]); }
+      pts.push([X(x1 * U), base]);
+      p.push("<polygon class='" + cls + "' points='" + pts.map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" ") + "'></polygon>");
+    }
+    if (showMid) {
+      var left = sc.a < sc.b ? "A" : "B", right = left === "A" ? "B" : "A";
+      area(0, mid / U, "dens-" + left); area(mid / U, 10, "dens-" + right);
+    } else area(0, 10, "dens-plain");
+    var cpts = [];
+    for (var i = 0; i <= 500; i++) { var x = i / 50; cpts.push(X(x * U).toFixed(1) + "," + Y(x).toFixed(1)); }
+    p.push("<polyline class='dens-curve' points='" + cpts.join(" ") + "'></polyline>");
+
+    if (showMid) {
+      p.push("<line class='mid' x1='" + X(mid) + "' y1='22' x2='" + X(mid) + "' y2='" + (AXY + 8) + "'></line>");
+      p.push("<text class='mid-l' x='" + X(mid) + "' y='14' text-anchor='" + anchorAt(X(mid), 60, 340) + "'>midpoint " + num(mid) + "</text>");
+    }
+    var ctrY = base - H - 14, items = [];
+    if (C.median) items.push(["median", d.median]);
+    if (C.mean) items.push(["mean", d.mean]);
+    var lastX = -99;
+    items.forEach(function (it) {
+      var x = X(u(it[1])), y = ctrY - (Math.abs(x - lastX) < 13 ? 15 : 0); lastX = x;
+      p.push("<line class='ctr-drop' x1='" + x + "' y1='" + (y + 5) + "' x2='" + x + "' y2='" + AXY + "'></line>");
+      p.push(ctrShape(it[0], x, y));
+    });
+
+    if (bands) {
+      var by = 250;
+      if (sc.a === sc.b) p.push("<text class='band-l' x='" + X(sc.a) + "' y='" + (by + 10) + "' text-anchor='" + anchorAt(X(sc.a), 60, 340) + "'>Same position, so every voter is indifferent</text>");
+      else {
+        var L = sc.a < sc.b ? "A" : "B", R = L === "A" ? "B" : "A", sa = densShareA(d, sc.a, sc.b), sL = L === "A" ? sa : 1 - sa;
+        p.push("<rect class='band-" + L + "' x='" + X(0) + "' y='" + by + "' width='" + (X(mid) - X(0)) + "' height='12'></rect>");
+        p.push("<rect class='band-" + R + "' x='" + X(mid) + "' y='" + by + "' width='" + (X(TOP) - X(mid)) + "' height='12'></rect>");
+        p.push("<rect class='band-edge' x='" + X(0) + "' y='" + by + "' width='" + (X(TOP) - X(0)) + "' height='12'></rect>");
+        p.push("<text class='band-l' x='" + X(0) + "' y='" + (by + 26) + "' text-anchor='start'>" + L + " gets " + pct(sL) + "</text>");
+        p.push("<text class='band-l' x='" + X(TOP) + "' y='" + (by + 26) + "' text-anchor='end'>" + R + " gets " + pct(1 - sL) + "</text>");
+      }
+    }
+
+    p.push("<line class='axis' x1='" + X(0) + "' y1='" + AXY + "' x2='" + X(TOP) + "' y2='" + AXY + "'></line>");
+    for (var t = 0; t <= 10; t++) {
+      p.push("<line class='tick' x1='" + X(t * U) + "' y1='" + (AXY - 5) + "' x2='" + X(t * U) + "' y2='" + (AXY + 5) + "'></line>");
+      p.push("<text class='tl' x='" + X(t * U) + "' y='" + (AXY + 20) + "' text-anchor='middle'>" + t + "</text>");
+    }
+
+    var CY = 200, anyGhost = false;
+    [["A", sc.ghostA], ["B", sc.ghostB]].forEach(function (g) {
+      if (g[1] === null || g[1] === undefined) return;
+      anyGhost = true;
+      var x = X(g[1]);
+      if ((sc.a !== null && Math.abs(X(sc.a) - x) < 14) || (sc.b !== null && Math.abs(X(sc.b) - x) < 14)) x += 20;
+      p.push(tri(x, CY, "ghost"));
+      p.push("<text class='ghost-l' x='" + x + "' y='" + (CY + 40) + "' text-anchor='middle'>" + g[0] + " before</text>");
+    });
+    var same = both && sc.a === sc.b, CYB = same ? CY + 30 : CY;
+    function cand(pos, y, who) {
+      var x = X(pos);
+      p.push(tri(x, y, "cand-" + who));
+      if (same) p.push("<text class='cand-l' x='" + (x + (x > 340 ? -22 : 22)) + "' y='" + (y + 5) + "' text-anchor='" + (x > 340 ? "end" : "start") + "'>" + who + "</text>");
+      else p.push("<text class='cand-l' x='" + x + "' y='" + (y + 25) + "' text-anchor='middle'>" + who + "</text>");
+    }
+    if (sc.a !== null) cand(sc.a, CY, "A");
+    if (sc.b !== null) cand(sc.b, CYB, "B");
+    if (sc.ring && both) {
+      [[sc.a, CY], [sc.b, CYB]].forEach(function (q) {
+        var x = X(q[0]), y = q[1] - 2;
+        p.push("<circle class='ring-case' cx='" + x + "' cy='" + y + "' r='16.5'></circle>");
+        p.push("<circle class='ring' cx='" + x + "' cy='" + y + "' r='14.5'></circle>");
+        p.push("<circle class='ring-case' cx='" + x + "' cy='" + y + "' r='12.5'></circle>");
+      });
+    }
+
+    var rb = $("resultBadge");
+    if (bands) {
+      var ro = densResult(d, sc.a, sc.b); rb.hidden = false;
+      $("resultVal").innerHTML = (ro.winner ? "<svg viewBox='0 0 14 14' aria-hidden='true'><polygon class='cand-" + ro.winner + "' points='7,1 13,13 1,13'></polygon></svg>" : "") + ro.text;
+    } else rb.hidden = true;
+    var y0 = showMid ? 0 : Math.max(0, ctrY - 12), y1 = bands ? 284 : same ? 262 : anyGhost ? 246 : 232;
+    $("line").setAttribute("viewBox", "0 " + y0 + " 400 " + (y1 - y0));
+    $("line").innerHTML = p.join("");
+    $("lineSub").textContent = sub || "";
+
+    var c = "Voters are " + d.desc + ".";
+    if (!sc.centers || C.median) c += " The median is " + d.median + " and the mean is " + d.mean + ".";
+    if (sc.a !== null) c += " A is at " + num(sc.a) + ".";
+    if (sc.b !== null) c += " B is at " + num(sc.b) + ".";
+    if (bands) c += sc.a === sc.b ? " The candidates are in the same place, so every voter is indifferent, and each candidate wins with probability 1/2." : " The midpoint is " + num(mid) + ". A gets " + pct(densShareA(d, sc.a, sc.b)) + " of the vote and B " + pct(1 - densShareA(d, sc.a, sc.b)) + ".";
+    if (sc.ring) c += " The gold rings mark a Nash equilibrium.";
+    $("lineCap").textContent = c;
+
+    key.push(keyItem("<path class='dens-curve' d='M1,12 C4,12 5,2 7,2 C9,2 10,12 13,12'></path>", "How many voters have ideal points near each position"));
+    if (showMid) { key.push(keyItem("<rect class='dens-A' x='1' y='3' width='12' height='9'></rect>", "Voters who vote for A")); key.push(keyItem("<rect class='dens-B' x='1' y='3' width='12' height='9'></rect>", "Voters who vote for B")); }
+    if (sc.a !== null) key.push(keyItem("<polygon class='cand-A' points='7,1 13,13 1,13'></polygon>", "Candidate A"));
+    if (sc.b !== null) key.push(keyItem("<polygon class='cand-B' points='7,1 13,13 1,13'></polygon>", "Candidate B"));
+    if (anyGhost) key.push(keyItem("<polygon class='ghost' points='7,1 13,13 1,13'></polygon>", "An earlier position"));
+    if (C.median) key.push(keyItem(ctrShape("median", 7, 7), "The median"));
+    if (C.mean) key.push(keyItem(ctrShape("mean", 7, 7), "The mean"));
+    $("legend").innerHTML = key.join("");
+  }
+
+
+  /* ================= moving the reader ================= */
+
+  var CARDS = { line: "lineCard", count: "countCard", case: "caseCard" };
+  var CARD_NAMES = { line: "the policy line", count: "the vote count", case: "the case card" };
+  var backBtn = $("backBtn");
+  var movedAway = false, autoScrollUntil = 0;
+  function markMoved() { movedAway = true; autoScrollUntil = Date.now() + (reduceMotion ? 100 : 900); }
+  function isEnoughOnScreen(el) {
+    var r = el.getBoundingClientRect(), vh = window.innerHeight;
+    if (r.top >= 0 && r.bottom <= vh) return true;
+    if (r.height > vh && r.top >= 0 && (vh - r.top) >= 0.6 * vh) return true;
+    return false;
+  }
+  function goTo(el) {
+    markMoved();
+    el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
+    setTimeout(updateBack, reduceMotion ? 150 : 950);
+  }
+  function bring(k) {
+    var el = $(CARDS[k]);
+    if (!el || el.hidden || isEnoughOnScreen(el)) return;
+    goTo(el);
+  }
+  function lookButtons(container, keys) {
+    container.innerHTML = "";
+    (keys || []).forEach(function (k) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "look-btn";
+      b.textContent = "Look at " + CARD_NAMES[k];
+      b.addEventListener("click", function () { goTo($(CARDS[k])); });
+      container.appendChild(b);
+    });
+  }
+  function anchorFor(m) {
+    if (m === "guided") return $("guidedNav");
+    if (m === "explore") return $("verdictBox");
+    var ids = ["t5", "t4", "t3", "t2p", "tpiv", "t2", "t1"];
+    for (var i = 0; i < ids.length; i++) if (!$(ids[i]).hidden) return $(ids[i]);
+    return null;
+  }
+  function anchorVisible(el) { var r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; }
+  function updateBack() {
+    var a = anchorFor(mode);
+    if (!a) { backBtn.hidden = true; return; }
+    if (anchorVisible(a)) { if (Date.now() >= autoScrollUntil) movedAway = false; backBtn.hidden = true; return; }
+    backBtn.hidden = !movedAway;
+    backBtn.textContent = mode === "guided" ? "Back to the steps" : mode === "explore" ? "Back to the controls" : "Back to the question";
+  }
+  window.addEventListener("scroll", updateBack, { passive: true });
+  window.addEventListener("resize", updateBack);
+  backBtn.addEventListener("click", function () {
+    var a = anchorFor(mode); if (!a) return;
+    a.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    movedAway = false; backBtn.hidden = true;
+  });
+
+  /* ================= the policy line =================
+     The scene object is described at drawLine. */
+
+  var X0 = 24, X1 = 376, AXY = 158;
+  function X(n) { return X0 + n * (X1 - X0) / TOP; }
+  function tri(x, y, cls) { return "<polygon class='" + cls + "' points='" + x + "," + (y - 8) + " " + (x + 8) + "," + (y + 6) + " " + (x - 8) + "," + (y + 6) + "'></polygon>"; }
+  function anchorAt(x, lo, hi) { return x < lo ? "start" : x > hi ? "end" : "middle"; }
+
+  function modes(vs) {
+    var st = {}, best = 0;
+    vs.forEach(function (z) { st[z] = (st[z] || 0) + 1; if (st[z] > best) best = st[z]; });
+    if (best < 2) return [];
+    return Object.keys(st).map(Number).filter(function (z) { return st[z] === best; }).sort(function (x, y) { return x - y; });
+  }
+  function medianRanks(n) { return n % 2 ? [(n + 1) / 2] : [n / 2, n / 2 + 1]; }
+  function ordinal(k) { var s = ["th", "st", "nd", "rd"], v = k % 100; return k + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+  /* shapes for the centers, shared by the figure and its key */
+  function ctrShape(kind, x, y) {
+    if (kind === "median") return "<polygon class='ctr' points='" + (x - 6) + "," + (y - 5) + " " + (x + 6) + "," + (y - 5) + " " + x + "," + (y + 5) + "'></polygon>";
+    if (kind === "mean") return "<polygon class='ctr-hollow' points='" + (x - 6) + "," + (y - 5) + " " + (x + 6) + "," + (y - 5) + " " + x + "," + (y + 5) + "'></polygon>";
+    if (kind === "middle") return "<rect class='ctr-hollow' x='" + (x - 4.5) + "' y='" + (y - 4.5) + "' width='9' height='9'></rect>";
+    return "<polygon class='ctr-hollow' points='" + x + "," + (y - 6) + " " + (x + 6) + "," + y + " " + x + "," + (y + 6) + " " + (x - 6) + "," + y + "'></polygon>";
+  }
+  function keyItem(svg, text) { return "<span><svg viewBox='0 0 14 14'>" + svg + "</svg>" + text + "</span>"; }
+
+  /* scene: { vs, a, b (null to hide), ghostA, ghostB, centers: {median, mean, middle, mode}, ranks,
+              mid (the midpoint only), count (midpoint, vote bands and voters colored by vote),
+              regionsFor (A position, or null), ring, ringLabel } */
+  function drawLine(sc, sub) {
+    if (sc.dens) { drawDens(sc, sub); return; }
+    var p = [], vs = sc.vs, key = [];
+    var both = sc.a !== null && sc.b !== null;
+    var bands = !!sc.count && both;
+    var showMid = (bands || !!sc.mid) && both && sc.a !== sc.b;
+    var mid = showMid ? (sc.a + sc.b) / 2 : null;
+
+    var stacks = {}, keys = [];
+    sorted(vs).forEach(function (z) { if (!stacks[z]) { stacks[z] = 0; keys.push(z); } stacks[z]++; });
+    var maxH = 0; keys.forEach(function (z) { if (stacks[z] > maxH) maxH = stacks[z]; });
+    function dotY(i) { return AXY - 12 - i * 12; }
+    var topY = dotY(maxH - 1);
+    var rankY = topY - 11;
+    var ctrY = (sc.ranks ? rankY - 18 : topY - 18);
+
+    /* the midpoint, labeled at the top */
+    if (showMid) {
+      p.push("<line class='mid' x1='" + X(mid) + "' y1='22' x2='" + X(mid) + "' y2='" + (AXY + 8) + "'></line>");
+      p.push("<text class='mid-l' x='" + X(mid) + "' y='14' text-anchor='" + anchorAt(X(mid), 60, 340) + "'>midpoint " + num(mid) + "</text>");
+    }
+
+    /* the centers: one row just above the voters, each dropped to the axis by a dotted line */
+    var C = sc.centers || {}, items = [];
+    if (C.middle) items.push({ k: "middle", x: TOP / 2 });
+    if (C.mode) modes(vs).forEach(function (z) { items.push({ k: "mode", x: z }); });
+    if (C.mean) items.push({ k: "mean", x: meanU(vs) });
+    var md = median(vs);
+    if (C.median) items.push({ k: "median", x: md[0], x2: md[1] });
+    var placed = [];
+    items.forEach(function (it) {
+      var px = X(it.x), px2 = it.x2 !== undefined ? X(it.x2) : px, level = 0;
+      placed.forEach(function (q) { if (px2 > q.lo - 13 && px < q.hi + 13 && q.level >= level) level = q.level + 1; });
+      var y = ctrY - level * 15;
+      placed.push({ lo: px, hi: px2, level: level });
+      [px, px2].forEach(function (x, i) { if (i === 0 || px2 !== px) p.push("<line class='ctr-drop' x1='" + x + "' y1='" + (y + 5) + "' x2='" + x + "' y2='" + AXY + "'></line>"); });
+      if (it.k === "median" && px2 !== px) {
+        p.push("<line class='ctr-bar' x1='" + px + "' y1='" + y + "' x2='" + px2 + "' y2='" + y + "'></line>");
+      } else p.push(ctrShape(it.k, px, y));
+    });
+
+    /* vote bands under the axis */
+    if (bands) {
+      var by = 250;
+      if (sc.a === sc.b) {
+        p.push("<text class='band-l' x='" + X(sc.a) + "' y='" + (by + 10) + "' text-anchor='" + anchorAt(X(sc.a), 100, 300) + "'>Same position, so every voter flips a coin</text>");
+      } else {
+        var left = sc.a < sc.b ? "A" : "B", right = left === "A" ? "B" : "A";
+        var s = split(vs, sc.a, sc.b), nl = left === "A" ? s.sa : s.sb, nr = left === "A" ? s.sb : s.sa;
+        p.push("<rect class='band-" + left + "' x='" + X(0) + "' y='" + by + "' width='" + (X(mid) - X(0)) + "' height='12'></rect>");
+        p.push("<rect class='band-" + right + "' x='" + X(mid) + "' y='" + by + "' width='" + (X(TOP) - X(mid)) + "' height='12'></rect>");
+        p.push("<rect class='band-edge' x='" + X(0) + "' y='" + by + "' width='" + (X(TOP) - X(0)) + "' height='12'></rect>");
+        var lx = Math.max((X(0) + X(mid)) / 2, 40), rx = Math.min((X(mid) + X(TOP)) / 2, 360);
+        var ll = left + " is sure of " + nl, rl = right + " is sure of " + nr;
+        if (rx - lx < 120) { p.push("<text class='band-l' x='" + X(0) + "' y='" + (by + 26) + "' text-anchor='start'>" + ll + "</text>"); p.push("<text class='band-l' x='" + X(TOP) + "' y='" + (by + 26) + "' text-anchor='end'>" + rl + "</text>"); }
+        else { p.push("<text class='band-l' x='" + lx + "' y='" + (by + 26) + "' text-anchor='middle'>" + ll + "</text>"); p.push("<text class='band-l' x='" + rx + "' y='" + (by + 26) + "' text-anchor='middle'>" + rl + "</text>"); }
+      }
+    }
+
+    /* the axis */
+    p.push("<line class='axis' x1='" + X(0) + "' y1='" + AXY + "' x2='" + X(TOP) + "' y2='" + AXY + "'></line>");
+    for (var t = 0; t <= 10; t++) {
+      p.push("<line class='tick' x1='" + X(t * U) + "' y1='" + (AXY - 5) + "' x2='" + X(t * U) + "' y2='" + (AXY + 5) + "'></line>");
+      p.push("<text class='tl' x='" + X(t * U) + "' y='" + (AXY + 20) + "' text-anchor='middle'>" + t + "</text>");
+    }
+
+    /* voters, stacked, colored by the candidate they vote for once the vote is counted */
+    var anyCoin = false, rank = 1, ringRanks = sc.ranks ? medianRanks(vs.length) : [], lastLabelX = -99, lastLong = false, lift = 0;
+    keys.forEach(function (z) {
+      var coin = (showMid || (bands && sc.a === sc.b)) && Math.abs(z - sc.a) === Math.abs(z - sc.b);
+      var cls = coin ? "voter-coin" : bands ? (sc.a === sc.b ? "voter" : (Math.abs(z - sc.a) < Math.abs(z - sc.b) ? "vote-A" : "vote-B")) : "voter";
+      if (coin) anyCoin = true;
+      for (var i = 0; i < stacks[z]; i++) {
+        p.push("<circle class='" + cls + "' cx='" + X(z) + "' cy='" + dotY(i) + "' r='5'></circle>");
+        if (ringRanks.indexOf(rank + i) >= 0) {
+          p.push("<circle class='ring-case' cx='" + X(z) + "' cy='" + dotY(i) + "' r='9'></circle>");
+          p.push("<circle class='ring' cx='" + X(z) + "' cy='" + dotY(i) + "' r='7.5' style='stroke-width:2'></circle>");
+        }
+      }
+      if (sc.ranks) {
+        var lab = stacks[z] > 1 ? rank + "–" + (rank + stacks[z] - 1) : String(rank), long = lab.length > 1;
+        lift = (X(z) - lastLabelX < 24 && (long || lastLong) && lift === 0) ? 11 : 0;
+        p.push("<text class='rank-l' x='" + X(z) + "' y='" + (rankY - lift) + "' text-anchor='middle'>" + lab + "</text>");
+        lastLabelX = X(z); lastLong = long;
+      }
+      rank += stacks[z];
+    });
+
+    /* the voter being moved, in a step that moves one voter: a dashed ring on the top of its stack */
+    if (sc.tracked !== undefined && stacks[sc.tracked]) {
+      p.push("<circle class='tracked' cx='" + X(sc.tracked) + "' cy='" + dotY(stacks[sc.tracked] - 1) + "' r='9.5'></circle>");
+    }
+
+    /* regions for B, given A */
+    if (sc.regionsFor !== null && sc.regionsFor !== undefined) {
+      var ry = bands ? 298 : 256, mv = sc.regionsMover === "A" ? "A" : "B", segs = regions(vs, sc.regionsFor, mv), labels = [];
+      segs.forEach(function (s) {
+        if (s.point) return;
+        var x1 = X(s.lo), x2 = X(s.hi);
+        if (s.f.n === s.f.d) {
+          p.push("<path class='reg-win' d='M" + (x1 + 3) + "," + (ry - 6) + " L" + (x1 + 3) + "," + ry + " L" + (x2 - 3) + "," + ry + " L" + (x2 - 3) + "," + (ry - 6) + "'></path>");
+          if (x2 - x1 > 56) labels.push([(x1 + x2) / 2, x2 - x1 > 120 ? mv + "’s winning region" : mv + " wins"]);
+        } else if (s.f.n === 0) {
+          p.push("<line class='reg-lose' x1='" + (x1 + 3) + "' y1='" + ry + "' x2='" + (x2 - 3) + "' y2='" + ry + "'></line>");
+          if (x2 - x1 > 56) labels.push([(x1 + x2) / 2, x2 - x1 > 120 ? mv + "’s losing region" : mv + " loses"]);
+        } else {
+          p.push("<path class='reg-part' d='M" + (x1 + 3) + "," + (ry - 6) + " L" + (x1 + 3) + "," + ry + " L" + (x2 - 3) + "," + ry + " L" + (x2 - 3) + "," + (ry - 6) + "'></path>");
+          if (x2 - x1 > 56) labels.push([(x1 + x2) / 2, "probability " + fstr(s.f)]);
+        }
+      });
+      var lastPx = -99;
+      segs.forEach(function (s) {
+        if (!s.point) return;
+        var x = X(s.lo);
+        p.push("<circle class='reg-pt' cx='" + x + "' cy='" + ry + "' r='4'></circle>");
+        var ty = (x - lastPx < 28) ? ry - 10 : ry + 16;
+        p.push("<text class='reg-pl' x='" + x + "' y='" + ty + "' text-anchor='middle'>" + fstr(s.f) + "</text>");
+        lastPx = x;
+      });
+      labels.forEach(function (l) { p.push("<text class='reg-l' x='" + Math.min(Math.max(l[0], 30), 370) + "' y='" + (ry + 28) + "' text-anchor='middle'>" + l[1] + "</text>"); });
+    }
+
+    /* candidates' ideal points, when they care about policy: a row of hollow circles under the bands */
+    if (sc.ideal) {
+      var iy = bands ? 300 : 256;
+      ["A", "B"].filter(function (w) { return sc.ideal[w] !== undefined; }).forEach(function (w) {
+        var x = X(sc.ideal[w]);
+        /* the guide to the axis skips the vote bands */
+        (bands ? [[AXY, 250], [262, iy - 7]] : [[AXY, iy - 7]]).forEach(function (sg) {
+          p.push("<line class='ctr-drop' x1='" + x + "' y1='" + sg[0] + "' x2='" + x + "' y2='" + sg[1] + "'></line>");
+        });
+        p.push("<circle class='ideal-" + w + "' cx='" + x + "' cy='" + iy + "' r='6'></circle>");
+        p.push("<text class='band-l' x='" + (x > 280 ? x - 11 : x + 11) + "' y='" + (iy + 4) + "' text-anchor='" + (x > 280 ? "end" : "start") + "'>" + w + "’s ideal point</text>");
+      });
+    }
+
+    /* ghosts: earlier or remembered positions */
+    var CY = 200, anyGhost = false;
+    [["A", sc.ghostA], ["B", sc.ghostB]].forEach(function (g) {
+      if (g[1] === null || g[1] === undefined) return;
+      anyGhost = true;
+      var x = X(g[1]);
+      /* a remembered position under a live candidate is nudged aside so both stay visible */
+      if ((sc.a !== null && Math.abs(X(sc.a) - x) < 14) || (sc.b !== null && Math.abs(X(sc.b) - x) < 14)) x += 20;
+      p.push(tri(x, CY, "ghost"));
+      p.push("<text class='ghost-l' x='" + x + "' y='" + (CY + 40) + "' text-anchor='middle'>" + g[0] + " " + (sc.ghostWord || "before") + "</text>");
+    });
+
+    /* candidates; two at the same position are stacked, A above B, both pointing at that spot,
+       with their letters beside them */
+    var same = both && sc.a === sc.b, CYB = same ? CY + 30 : CY;
+    function cand(pos, y, who) {
+      var x = X(pos);
+      p.push(tri(x, y, "cand-" + who));
+      if (same) p.push("<text class='cand-l' x='" + (x + (x > 340 ? -22 : 22)) + "' y='" + (y + 5) + "' text-anchor='" + (x > 340 ? "end" : "start") + "'>" + who + "</text>");
+      else p.push("<text class='cand-l' x='" + x + "' y='" + (y + 25) + "' text-anchor='middle'>" + who + "</text>");
+    }
+    if (sc.a !== null) cand(sc.a, CY, "A");
+    if (sc.b !== null) cand(sc.b, CYB, "B");
+
+    if (sc.ring && both) {
+      [[sc.a, CY], [sc.b, CYB]].forEach(function (q) {
+        var x = X(q[0]), y = q[1] - 2;
+        p.push("<circle class='ring-case' cx='" + x + "' cy='" + y + "' r='16.5'></circle>");
+        p.push("<circle class='ring' cx='" + x + "' cy='" + y + "' r='14.5'></circle>");
+        p.push("<circle class='ring-case' cx='" + x + "' cy='" + y + "' r='12.5'></circle>");
+      });
+    }
+
+    /* size the figure to what is drawn, so an empty band or region row leaves no gap */
+    var y0 = showMid ? 0 : Math.max(0, Math.min(topY - 8, sc.ranks ? rankY - 26 : topY, ctrY - Math.max(0, placed.reduce(function (m, q) { return Math.max(m, q.level); }, 0)) * 15 - (items.length ? 10 : 0)) - 4);
+    var y1 = sc.ideal ? (bands ? 314 : 270) : (sc.regionsFor !== null && sc.regionsFor !== undefined) ? (bands ? 332 : 290) : bands ? 284 : same ? 262 : anyGhost ? 246 : (sc.a !== null || sc.b !== null) ? 232 : AXY + 28;
+    $("line").setAttribute("viewBox", "0 " + y0 + " 400 " + (y1 - y0));
+    var rb = $("resultBadge");
+    if (both && (sc.count || sc.result) && !sc.hideResult) {
+      var ro = resultText(vs, sc.a, sc.b);
+      rb.hidden = false;
+      $("resultVal").innerHTML = (ro.winner ? "<svg viewBox='0 0 14 14' aria-hidden='true'><polygon class='cand-" + ro.winner + "' points='7,1 13,13 1,13'></polygon></svg>" : "") + ro.text;
+    } else rb.hidden = true;
+    $("line").innerHTML = p.join("");
+    $("lineSub").textContent = sub || "";
+    $("lineCap").textContent = caption(sc);
+
+    /* the key lists only what is on the figure */
+    if (bands && sc.a !== sc.b) {
+      key.push(keyItem("<circle class='vote-A' cx='7' cy='7' r='5'></circle>", "A voter who votes for A"));
+      key.push(keyItem("<circle class='vote-B' cx='7' cy='7' r='5'></circle>", "A voter who votes for B"));
+    } else key.push(keyItem("<circle class='voter' cx='7' cy='7' r='5'></circle>", "A voter’s ideal point"));
+    if (anyCoin) key.push(keyItem("<circle class='voter-coin' cx='7' cy='7' r='5'></circle>", "A voter who flips a coin"));
+    if (sc.a !== null) key.push(keyItem("<polygon class='cand-A' points='7,1 13,13 1,13'></polygon>", "Candidate A"));
+    if (sc.b !== null) key.push(keyItem("<polygon class='cand-B' points='7,1 13,13 1,13'></polygon>", "Candidate B"));
+    if (anyGhost) key.push(keyItem("<polygon class='ghost' points='7,1 13,13 1,13'></polygon>", sc.ghostWord === "start" ? "A starting position" : "An earlier position"));
+    if (C.median) key.push(md[0] === md[1] ? keyItem(ctrShape("median", 7, 7), "The median") : keyItem("<line class='ctr-bar' x1='1' y1='7' x2='13' y2='7'></line>", "The median interval"));
+    if (C.mean) key.push(keyItem(ctrShape("mean", 7, 7), "The mean"));
+    if (C.middle) key.push(keyItem(ctrShape("middle", 7, 7), "The middle of the policy space"));
+    if (C.mode && modes(vs).length) key.push(keyItem(ctrShape("mode", 7, 7), modes(vs).length > 1 ? "The modes" : "The mode"));
+    if (sc.tracked !== undefined) key.push(keyItem("<circle class='tracked' cx='7' cy='7' r='5.5'></circle>", "The voter you are moving"));
+    if (sc.ideal) { key.push(keyItem("<circle class='ideal-A' cx='7' cy='7' r='5'></circle>", "A’s ideal point")); if (sc.ideal.B !== undefined) key.push(keyItem("<circle class='ideal-B' cx='7' cy='7' r='5'></circle>", "B’s ideal point")); }
+    if (sc.ranks) key.push(keyItem("<circle class='ring' cx='7' cy='7' r='5' style='stroke-width:2'></circle>", vs.length % 2 ? "The median voter" : "The two middle voters"));
+    if (sc.regionsFor !== null && sc.regionsFor !== undefined) {
+      var mvk = sc.regionsMover === "A" ? "A" : "B", sg = regions(vs, sc.regionsFor, mvk);
+      if (sg.some(function (q) { return !q.point && q.f.n === q.f.d; })) key.push(keyItem("<path class='reg-win' d='M2,4 L2,10 L12,10 L12,4'></path>", mvk + "’s winning region"));
+      if (sg.some(function (q) { return !q.point && q.f.n !== 0 && q.f.n !== q.f.d; })) key.push(keyItem("<path class='reg-part' d='M2,4 L2,10 L12,10 L12,4'></path>", "Where " + mvk + " wins with some probability"));
+      key.push(keyItem("<circle class='reg-pt' cx='7' cy='7' r='4'></circle>", "A cut point, labeled with " + mvk + "’s probability of winning"));
+      if (sg.some(function (q) { return !q.point && q.f.n === 0; })) key.push(keyItem("<line class='reg-lose' x1='1' y1='7' x2='13' y2='7'></line>", mvk + "’s losing region"));
+    }
+    $("legend").innerHTML = key.join("");
+  }
+
+  function voterList(vs) {
+    var st = {}, keys = [];
+    sorted(vs).forEach(function (z) { if (!st[z]) { st[z] = 0; keys.push(z); } st[z]++; });
+    return keys.map(function (z) { return num(z) + (st[z] > 1 ? " (" + st[z] + " voters)" : ""); }).join(", ");
+  }
+  function caption(sc) {
+    var vs = sc.vs, c = vs.length + " voters at " + voterList(vs) + ".", C = sc.centers || {};
+    if (sc.a !== null) c += " A is at " + num(sc.a) + ".";
+    if (sc.b !== null) c += " B is at " + num(sc.b) + ".";
+    if (C.middle) c += " The middle of the policy space is 5.";
+    if (C.mode) { var mo = modes(vs); c += !mo.length ? " No two voters share an ideal point, so there is no single mode." : mo.length === 1 ? " The mode is " + num(mo[0]) + "." : " The modes are " + mo.map(num).join(" and ") + "."; }
+    if (C.mean) c += " The mean is " + meanText(vs) + ".";
+    if (sc.ranks) { var rk = medianRanks(vs.length); c += rk.length === 1 ? " The median voter is the " + ordinal(rk[0]) + " of " + vs.length + "." : " The two middle voters are the " + ordinal(rk[0]) + " and " + ordinal(rk[1]) + " of " + vs.length + "."; }
+    if (C.median) { var md = median(vs); c += md[0] === md[1] ? " The median is " + num(md[0]) + "." : " The median interval runs from " + num(md[0]) + " to " + num(md[1]) + "."; }
+    var both = sc.a !== null && sc.b !== null;
+    if ((sc.count || sc.mid) && both) {
+      if (sc.a === sc.b) c += " The candidates are in the same place, so every voter is indifferent and flips a coin, and each candidate wins with probability 1/2.";
+      else {
+        c += " The midpoint is " + num((sc.a + sc.b) / 2) + ".";
+        if (sc.count) { var s = split(vs, sc.a, sc.b); c += " A is sure of " + cnt(s.sa, "vote", "votes") + " and B of " + s.sb + (s.k ? ", and " + cnt(s.k, "voter is indifferent and flips a coin", "voters are indifferent and flip coins") : "") + "."; }
+      }
+    }
+    if (sc.regionsFor !== null && sc.regionsFor !== undefined) c += " " + regionText(vs, sc.regionsFor, sc.regionsMover);
+    if (sc.ring) c += " The gold rings mark " + (sc.ringLabel || "a Nash equilibrium") + ".";
+    return c;
+  }
+
+  /* ================= the vote count ================= */
+
+  function countRows(vs, a, b) {
+    if (a === null || b === null) return null;
+    if (countDens) {
+      var sh = densShareA(countDens, a, b);
+      return { pos: "A at " + num(a) + ", B at " + num(b), mid: a === b ? "none, same position" : num((a + b) / 2),
+               vsa: pct(sh), vsb: pct(1 - sh), res: densResult(countDens, a, b).short, sa: "–", sb: "–", k: "–", pa: "–", pb: "–" };
+    }
+    var s = split(vs, a, b), fa = chanceA(vs, a, b), fb = chanceB(vs, a, b);
+    return {
+      pos: "A at " + num(a) + ", B at " + num(b),
+      mid: a === b ? num(a) + ", the same position" : num((a + b) / 2),
+      sa: String(s.sa), sb: String(s.sb), k: String(s.k), pv: pvText(vs, a, b),
+      res: resultText(vs, a, b).short, pa: fstr(fa), pb: fstr(fb)
+    };
+  }
+  function pvText(vs, a, b) {
+    var q = pivInfo(vs, a, b);
+    return q.k === 0 ? "no indifferent voters" : q.pivotal ? "yes" : "no, " + q.sure + " wins whatever they do";
+  }
+  var COUNT = [
+    { k: "pos", label: "Positions" },
+    { k: "mid", label: "Midpoint", f: "halfway between A and B" },
+    { k: "sa", label: "Voters sure to vote for A", f: "strictly closer to A" },
+    { k: "sb", label: "Voters sure to vote for B", f: "strictly closer to B" },
+    { k: "k", label: "Indifferent voters, who flip a coin", f: "exactly at the midpoint" },
+    { k: "pv", label: "Are the indifferent voters pivotal?", f: "can their votes change who wins?" },
+    { k: "vsa", label: "A’s vote share", f: "the area on A’s side of the midpoint" },
+    { k: "vsb", label: "B’s vote share", f: "the area on B’s side of the midpoint" },
+    { k: "res", label: "Election result" },
+    { k: "pa", label: "A’s expected payoff", f: "1 × probability of winning + 0 × probability of losing" },
+    { k: "pb", label: "B’s expected payoff", f: "1 × probability of winning + 0 × probability of losing" }
+  ];
+  /* shown: which rows are revealed; before: a second set of rows to compare */
+  var countDens = null, countSkip = { vsa: 1, vsb: 1 };
+  function baseSkip() { return countDens ? { sa: 1, sb: 1, k: 1, pv: 1, pa: 1, pb: 1 } : { vsa: 1, vsb: 1 }; }
+  function renderCount(vs, a, b, shown, fresh, before, note) {
+    var r = countRows(vs, a, b), rb = before ? countRows(vs, before.a, before.b) : null;
+    $("countHead").innerHTML = rb ? "<tr><th scope='col'></th><th scope='col'>" + (before.label || "Remembered") + "</th><th scope='col'>Now</th></tr>" : "";
+    var body = $("countBody"); body.innerHTML = "";
+    COUNT.forEach(function (row) {
+      if (countSkip[row.k]) return;
+      var tr = document.createElement("tr");
+      var th = document.createElement("th"); th.scope = "row";
+      th.appendChild(document.createTextNode(row.label));
+      if (row.f) { var f = document.createElement("span"); f.className = "rf"; f.textContent = row.f; th.appendChild(f); }
+      tr.appendChild(th);
+      if (rb) {
+        var tb = document.createElement("td"), vb = document.createElement("span");
+        vb.className = "rv before"; vb.textContent = rb[row.k]; tb.appendChild(vb); tr.appendChild(tb);
+      }
+      var td = document.createElement("td"), v = document.createElement("span");
+      if (r && (shown === true || shown[row.k])) { v.className = "rv"; v.textContent = r[row.k]; if (fresh && fresh[row.k]) td.className = "fresh"; }
+      else { v.className = "rv unknown"; v.textContent = r ? "?" : "–"; v.setAttribute("aria-label", r ? "not yet worked out" : "no pair of positions"); }
+      td.appendChild(v); tr.appendChild(td);
+      body.appendChild(tr);
+    });
+    $("countCaption").textContent = note || "Who votes for whom, and who wins.";
+  }
+  function showCards(c) {
+    $("caseCard").hidden = !c.case;
+    $("lineCard").hidden = !c.line;
+    $("countCard").hidden = !c.count;
+  }
+
+  /* ================= guided walkthrough ================= */
+
+  function U_(arr) { return arr.map(u); }
+  var W = U_([0, 1, 1, 1, 6.5, 7, 7.5, 8, 8.5]);
+  var W_EDGE = U_([0, 1, 1, 1, 6.5, 7, 7.5, 8, 10]);
+  var W_EVEN = U_([0, 1, 1, 1, 6.5, 7, 7.5, 8, 8.5, 9.5]);
+  var ALL4 = { median: true, mean: true, middle: true, mode: true };
+  var ROWS_ALL = true, ROWS_NONE = {}, ROWS_MID = { pos: 1, mid: 1 };
+  var FRESH_COUNT = { sa: 1, sb: 1, k: 1, pv: 1, res: 1, pa: 1, pb: 1 };
+
+  /* The 16 ways four indifferent voters can split, grouped by votes for A, as an accessible table.
+     marked: label the columns where A wins (3 sure votes, so 2 or more) and where B wins. */
+  var TIE4 = U_([1, 3, 5.5, 7.5, 7.5, 7.5, 7.5, 9, 9.5]);
+  function splitTable(marked) {
+    var cols = [[], [], [], [], []];
+    for (var m = 15; m >= 0; m--) {
+      var pat = [], k = 0;
+      for (var i = 3; i >= 0; i--) { var a = (m >> i) & 1; pat.push(a ? "A" : "B"); k += a; }
+      cols[k].push(pat.join(""));
+    }
+    var h = "<div class='table-scroll'><table class='split'><caption>The 16 ways the four voters at 7.5 can vote" + (marked ? ", and who wins" : "") + "</caption>";
+    h += "<thead><tr><th scope='row'>Votes for A</th>" + cols.map(function (c, k) { return "<th scope='col'" + (marked ? " class='" + (k >= 2 ? "win-A" : "win-B") + "'" : "") + ">" + k + "</th>"; }).join("") + "</tr></thead><tbody>";
+    h += "<tr><th scope='row'>Ways</th>" + cols.map(function (c, k) { return "<td" + (marked ? " class='" + (k >= 2 ? "win-A" : "win-B") + "'" : "") + "><strong>" + c.length + "</strong></td>"; }).join("") + "</tr>";
+    if (marked) h += "<tr><th scope='row'>Winner</th>" + cols.map(function (c, k) { return "<td class='" + (k >= 2 ? "win-A" : "win-B") + "'>" + (k >= 2 ? "A" : "B") + "</td>"; }).join("") + "</tr>";
+    h += "<tr><th scope='row'>Patterns</th>" + cols.map(function (c, k) { return "<td class='pats" + (marked ? " " + (k >= 2 ? "win-A" : "win-B") : "") + "'>" + c.join("<br>") + "</td>"; }).join("") + "</tr>";
+    return h + "</tbody></table></div>";
+  }
+
+  var STEPS = [
+    { title: "Voters on a policy line", changes: null, look: ["line"],
+      sc: { vs: W, a: null, b: null }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "Nine voters. The candidates arrive in Step 7.",
+      body: [
+        "Nine voters have ideal points on a policy line that runs from 0 to 10. A voter’s utility from a policy falls the farther the policy is from their ideal point, at the same rate on both sides, so utility is −|z − p| for a voter at z and a policy p.",
+        "Two candidates, A and B, will announce positions. Each voter votes for the closer candidate. With only two candidates that is a weakly dominant strategy, so sincere voting isn’t an extra assumption. A voter exactly halfway between the candidates is indifferent and flips a coin.",
+        "The candidates are office-seeking. A candidate gets 1 if it wins and 0 if it loses, and a tied vote is settled by a coin toss. When coin flips can decide the election, what a candidate cares about is its probability of winning. That is its expected payoff, 1 × (probability of winning) + 0 × (probability of losing)."
+      ] },
+    { title: "The middle of the policy space", changes: ["line"], look: ["line"],
+      sc: { vs: W, a: null, b: null, centers: { middle: true } }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "The middle of the policy space, marked with a square.",
+      body: [
+        "The middle of the policy space is 5, halfway between 0 and 10. It depends only on the scale, not on where the voters are, so it doesn’t describe the voter ideal points at all.",
+        "There are three common ways to describe the center of a set of points like the voter ideal points. These are the mode, the mean and the median. The next three steps take them one at a time."
+      ] },
+    { title: "The mode", changes: ["line"], look: ["line"],
+      sc: { vs: W, a: null, b: null, centers: { mode: true } }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "The mode, marked with a diamond.",
+      body: [
+        "The mode is the most common ideal point. Three voters share an ideal point of 1, and no other point has more than one voter, so the mode is 1."
+      ] },
+    { title: "The mean", changes: ["line"], look: ["line"],
+      sc: { vs: W, a: null, b: null, centers: { mean: true } }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "The mean, marked with a hollow triangle.",
+      body: [
+        "The mean is the average of the ideal points. Add them up and divide by the number of voters.",
+        "(0 + 1 + 1 + 1 + 6.5 + 7 + 7.5 + 8 + 8.5) / 9 = 40.5 / 9 = 4.5.",
+        "The four voters on the left pull the mean down, well below where most of the voters are. The mean depends on how far each voter is from the others, so moving a single voter farther out changes it."
+      ] },
+    { title: "The median", changes: ["line"], look: ["line"],
+      sc: { vs: W, a: null, b: null, centers: { median: true }, ranks: true }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "The voters numbered in order, with the median voter ringed in gold.",
+      body: [
+        "Number the voters in order from left to right. Where several share an ideal point, each one still counts, so the three voters at 1 are the 2nd, 3rd and 4th.",
+        "With nine voters, the median voter is the one in the middle, the 5th, with four voters on each side. Its ideal point, 6.5, is the median."
+      ] },
+    { title: "Putting them together", changes: ["line"], look: ["line"],
+      sc: { vs: W, a: null, b: null, centers: ALL4 }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "The mode, the mean and the median, with the middle of the policy space.",
+      body: [
+        "Here are the three centers together, along with the middle of the policy space. The mode is 1, the mean is 4.5, the median is 6.5, and the middle of the policy space is 5.",
+        "They can be far apart, as they are here. The rest of the walkthrough asks which of them the candidates are drawn to."
+      ] },
+    { title: "The candidates announce positions", changes: ["line"], look: ["line", "count"],
+      sc: { vs: W, a: u(3.5), b: u(8.5), mid: true }, rows: ROWS_MID, fresh: ROWS_MID, cards: { line: true, count: true },
+      sub: "A announces 3.5 and B announces 8.5.",
+      body: [
+        "Now the candidates announce their positions. A announces 3.5 and B announces 8.5. Which voters vote for which candidate?",
+        "Start by finding the midpoint between the two positions, halfway between them. (3.5 + 8.5) / 2 = 6.",
+        "A voter located at the midpoint would be equally distant from each candidate, and so indifferent between them. Voters to the left of the midpoint are closer to A and so prefer A. Voters to the right of the midpoint are closer to B and so prefer B. Here nobody is exactly at 6, so nobody needs to flip a coin."
+      ] },
+    { title: "Counting the votes", changes: ["line"], look: ["line", "count"],
+      sc: { vs: W, a: u(3.5), b: u(8.5), count: true }, rows: ROWS_ALL, fresh: FRESH_COUNT, cards: { line: true, count: true },
+      sub: "Each voter is colored by the candidate they vote for.",
+      body: [
+        "Once the midpoint is identified, we can determine which voters vote for A and which vote for B. That tells us how many votes each candidate gets, and so which candidate wins.",
+        "The voters at 0, 1, 1 and 1 are to the left of the midpoint, so they vote for A. The voters at 6.5, 7, 7.5, 8 and 8.5 are to the right, so they vote for B.",
+        "So A gets four votes and B gets five. B wins for sure and A loses for sure. B’s expected payoff is 1 and A’s is 0."
+      ] },
+    { title: "Is (3.5, 8.5) a Nash equilibrium?", changes: ["line"], look: ["line", "count"],
+      sl: { start: [3.5, 8.5], move: "A" },
+      sc: { vs: W, a: u(3.5), b: u(8.5), count: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "B is held at 8.5. Move A with its slider under the figure.",
+      body: [
+        "A pair of positions is a Nash equilibrium if neither candidate has a profitable unilateral deviation, a change in its own position, with the other candidate staying put, that raises its expected payoff.",
+        "To check, hold one candidate still and move the other. Start with A. At 3.5, A loses. Can it move somewhere and win? B is held at 8.5, so its slider under the figure is locked. Drag A’s slider from 0 to 10 and watch the election result."
+      ] },
+    { title: "What A found", changes: ["line"], look: ["line"],
+      sc: { vs: W, a: null, b: u(8.5), regionsFor: u(8.5), regionsMover: "A", centers: { median: true } }, rows: ROWS_NONE, cards: { line: true, count: true },
+      sub: "B at 8.5. The marks under the line show A’s result at every position.",
+      body: [
+        "By moving A, you should have found that A wins whenever its position is strictly between 4.5 and 8.5, and loses whenever its position is below 4.5 or above 8.5. These are A’s winning region and A’s losing region, given B at 8.5. At exactly 8.5, A is in the same place as B, so every voter is indifferent and flips a coin, and each candidate wins with probability 1/2. At exactly 4.5, the median voter is halfway between the candidates and flips a coin, so again each wins with probability 1/2.",
+        "The two cut points, 4.5 and 8.5, are marked by small circles on the policy line. They depend on two things. One is B’s position, 8.5. The other is B’s mirror image around the median, the point the same distance from the median voter but on the other side, 2 × 6.5 − 8.5 = 4.5.",
+        "Between B’s position and its mirror image, A is closer to the median voter than B is. So A gets the median voter and everyone on A’s side of the median, which is a majority, and A wins. Outside them, B is closer to the median voter, and B wins.",
+        "So A has profitable deviations, and (3.5, 8.5) is not a Nash equilibrium. Any position between the cut points would do, but finding one is enough."
+      ] },
+    { title: "What about B?", changes: ["line"], look: ["line", "count"],
+      sl: { start: [3.5, 8.5], move: "B" },
+      sc: { vs: W, a: u(3.5), b: u(8.5), count: true, regionsFor: u(3.5), regionsMover: "B", centers: { median: true } }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "A is held at 3.5. Move B with its slider under the figure.",
+      body: [
+        "Now hold A at 3.5 and drag B’s slider. The marks under the line show B’s result at every position.",
+        "The same reasoning applies with the roles swapped. B wins whenever it is closer to the median voter than A is, which is anywhere strictly between A’s position, 3.5, and A’s mirror image, 2 × 6.5 − 3.5 = 9.5. At 8.5, B already wins, so no move can make B better off.",
+        "However, it takes only one candidate with a profitable deviation to rule out a Nash equilibrium, and A has one."
+      ] },
+    { title: "When one candidate is at the median", changes: ["line"], look: ["line", "count"],
+      sl: { start: [6.5, 10], move: "B" },
+      sc: { vs: W, a: u(6.5), b: u(10), count: true, regionsFor: u(6.5), regionsMover: "B" }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "A is held at the median, 6.5. Move B with its slider under the figure.",
+      body: [
+        "Now hold A at the median, 6.5, and drag B’s slider. A’s mirror image is 2 × 6.5 − 6.5 = 6.5, the same point, so there is no region strictly between them for B to win in.",
+        "Wherever else B goes, the midpoint lands on B’s side of the median voter, and A gets the median voter and everyone on the far side. B has no winning region. The best B can do is move to 6.5 itself, where every voter is indifferent and each candidate wins with probability 1/2."
+      ] },
+    { title: "A Nash equilibrium", changes: ["line"], look: ["line", "count"],
+      sl: { start: [6.5, 6.5], move: "both", ringStart: true },
+      sc: { vs: W, a: u(6.5), b: u(6.5), count: true, ring: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Both candidates start at the median, 6.5. Move either one with the sliders under the figure.",
+      body: [
+        "Both candidates now start at 6.5, and each wins with probability 1/2. Both sliders are free, but moving one puts the other back at 6.5, so every move you try is a unilateral deviation.",
+        "Watch the election result as you try moving either candidate. Each starts with probability 1/2 of winning, and every move away from 6.5 turns that into a loss for the candidate who moved. Neither candidate has a profitable unilateral deviation, so (6.5, 6.5) is a Nash equilibrium.",
+        "It is also the only one. Steps 10 to 12 showed why. Whenever one candidate is away from the median, the other has positions that win, and the loser would rather move. When one candidate is at the median, the other’s best strategy is to join it."
+      ] },
+    { title: "Indifferent voters", changes: ["line"], look: ["line", "count"],
+      sc: { vs: W, a: u(0), b: u(2), count: true, centers: { median: true } }, rows: ROWS_ALL, fresh: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Back to the nine voters. A is at 0 and B is at 2, so the three voters at 1 are indifferent.",
+      body: [
+        "A voter exactly at the midpoint is the same distance from both candidates, so they are indifferent between them, and they flip a coin to decide how to vote. We have already seen indifferent voters twice. When A was at B’s mirror image, the median voter was indifferent. When both candidates were in the same place, every voter was. Both times, each candidate won with probability 1/2. What happens when several voters, but not all of them, are indifferent?",
+        "<div class='stmt' role='note' aria-label='Working out the probability of winning'><span class='stmt-head'>Working out the probability of winning when some voters are indifferent</span><ol class='recap'><li>Count each candidate’s sure votes, and the number of votes a candidate needs to win.</li><li>Work out how many of the indifferent voters each candidate needs. A candidate that already has enough sure votes needs none of them.</li><li>Count the equally likely ways the indifferent voters can vote, and the ways that give each candidate what it needs.</li></ol></div>",
+        "Here A is at 0 and B is at 2, so the midpoint is 1, and the three voters at 1 are indifferent. A is sure of the voter at 0, and B is sure of the five voters at 6.5 and above. With nine voters, a candidate needs five votes to win.",
+        "B already has five votes, so it needs none of the indifferent voters. A would need four more, and only three voters are indifferent. So the indifferent voters aren’t <em>pivotal</em>. Their votes can’t change who wins, and B wins for sure however their coins land.",
+        "The indifferent voters do change the vote count, since B gets anywhere from five to eight votes. But these candidates care only about winning, so the vote count doesn’t matter to them.",
+        "Indifferent voters can be pivotal only when the midpoint is at the median voter, as it is when one candidate is at the other’s mirror image. Otherwise the median voter is strictly closer to one candidate, and that candidate is sure of the median voter and everyone beyond, which is a majority. The next three steps look at indifferent voters who are pivotal."
+      ] },
+    { title: "When indifferent voters are pivotal", changes: ["line"], look: ["line", "count"],
+      sc: { vs: U_([0.5, 2, 4.5, 4.5, 4.5, 6, 7, 8.5, 9]), a: u(3), b: u(6), count: true, centers: { median: true } }, rows: ROWS_ALL, fresh: ROWS_ALL, cards: { line: true, count: true },
+      sub: "A new electorate of nine voters, three of them sharing an ideal point of 4.5, the median. A is at 3 and B is at 6.",
+      body: [
+        "Here is a new electorate of nine voters. A is at 3 and B is at 6, so the midpoint is 4.5. That is the median, and three voters share it. All three are indifferent, and each flips their own coin. What’s the probability that each candidate wins?",
+        "First, count the sure votes. A is sure of the two voters to the left of 4.5, and B is sure of the four to the right. With nine voters, a candidate needs five votes to win.",
+        "Next, work out how many of the three indifferent voters each candidate needs. A has two votes, so it needs three more, which means all three of them. B has four, so it needs only one of the three. Neither candidate has a majority from its sure votes alone, so the indifferent voters are pivotal as a group.",
+        "Then calculate the probabilities. Each coin flip goes to A with probability 1/2, so A gets all three with probability 1/2 × 1/2 × 1/2 = 1/8. B wins unless A gets all three, so B wins with probability 1 − 1/8 = 7/8.",
+        "Here A needs every one of the indifferent voters, and there is only one way for that to happen, which is why the calculation is just 1/2 × 1/2 × 1/2. The next two steps look at a case where a candidate needs some of them but not all, which takes a little counting."
+      ] },
+    { title: "Counting the ways four indifferent voters can vote", changes: ["line"], look: ["line"],
+      sc: { vs: TIE4, a: u(6), b: u(9), mid: true, centers: { median: true } }, rows: ROWS_MID, fresh: ROWS_MID, cards: { line: true, count: true },
+      sub: "A new electorate of nine voters, four of them sharing an ideal point of 7.5, the median. A is at 6 and B is at 9, so the four voters at 7.5 are indifferent.",
+      body: [
+        "Here is another new electorate of nine voters, four of whom share an ideal point of 7.5, the median. A is at 6 and B is at 9, so the midpoint is 7.5, and all four of those voters are indifferent and flip coins.",
+        "Before working out who wins, we need a way to count. Each of the four voters votes for A or for B. How many different ways can the four of them vote?",
+        "The first indifferent voter can vote A or B, which is two possibilities. For each of those, the second can vote A or B, so two indifferent voters can vote in 2 × 2 = 4 ways. Each extra indifferent voter doubles the number again, so four can vote in 2 × 2 × 2 × 2 = 16 ways. Each coin is fair, so all 16 are equally likely.",
+        splitTable(false),
+        "The table lists all 16 patterns, writing the four votes in order, so ABBA means the first and last voters vote for A. The patterns are grouped by how many votes A gets. There is only one way for A to get none of them (BBBB) and only one way to get all four (AAAA), but there are six ways to get exactly two.",
+        "The number of ways to get exactly <em>k</em> votes for A from four voters is called “4 choose <em>k</em>.” Here it is 1, 4, 6, 4 and 1 for <em>k</em> = 0, 1, 2, 3 and 4, and the five numbers add up to 16. There is also a formula, 4! / (<em>k</em>! × (4 − <em>k</em>)!), where 4! means 4 × 3 × 2 × 1 = 24. For <em>k</em> = 2 it gives 24 / (2 × 2) = 6. You don’t need the formula here, since listing the patterns works just as well.",
+        "The previous step was the simplest case. There, A needed all three of three indifferent voters, which is just one of the 2 × 2 × 2 = 8 patterns, so its probability was 1/8."
+      ] },
+    { title: "Needing some of the indifferent voters", changes: ["line"], look: ["line", "count"],
+      sc: { vs: TIE4, a: u(6), b: u(9), count: true, centers: { median: true } }, rows: ROWS_ALL, fresh: FRESH_COUNT, cards: { line: true, count: true },
+      sub: "A at 6 and B at 9. The four voters at 7.5 are indifferent.",
+      body: [
+        "Now back to the election. A is at 6 and B is at 9, and the four voters at 7.5 are indifferent. What’s the probability that each candidate wins?",
+        "First, count the sure votes. A is sure of the three voters to the left of 7.5, and B is sure of the two to the right. A candidate needs five votes to win.",
+        "Neither candidate has a majority from its sure votes alone, so again the indifferent voters are pivotal. A needs at least two of the four, and B needs at least three. To see why, suppose <em>k</em> of the four vote for A. Then A gets 3 + <em>k</em> votes and B gets 2 + (4 − <em>k</em>) = 6 − <em>k</em>. A wins if 3 + <em>k</em> > 6 − <em>k</em>, which means <em>k</em> ≥ 2.",
+        splitTable(true),
+        "In the table, A wins in the columns for 2, 3 and 4 votes for A, which hold 6 + 4 + 1 = 11 of the 16 equally likely patterns. So A wins with probability 11/16. B wins in the columns for 0 and 1, which hold 1 + 4 = 5 patterns, so B wins with probability 5/16.",
+        "In both examples the indifferent voters are pivotal, and coin flips decide the election, but the probabilities need not be even. They depend on how many of the indifferent voters each candidate needs, and on how many ways there are to get them. However uneven they are, B can still do better by moving into its winning region, between A’s position and A’s mirror image, and winning for sure. So pivotal indifferent voters don’t change the equilibrium."
+      ] },
+    { title: "Does the distribution of voters matter?", changes: ["line"], look: ["line", "count"],
+      sl: { move: "both", ringStart: true, choices: [
+        { id: "center", t: "Bunched in the center", vs: [3.5, 4, 4.5, 5, 5.5, 6, 6, 6.5, 7.5] },
+        { id: "polar", t: "Polarized", vs: [0.5, 1, 1.5, 2, 7, 8, 8.5, 9, 9.5] },
+        { id: "skew", t: "Skewed", vs: [2, 2.5, 3, 3, 3.5, 4, 6, 8.5, 10] }
+      ] },
+      sc: { vs: U_([3.5, 4, 4.5, 5, 5.5, 6, 6, 6.5, 7.5]), a: u(5.5), b: u(5.5), count: true, centers: { median: true, mean: true }, ring: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Choose an electorate with the buttons under the figure. Both candidates start at its median.",
+      body: [
+        "The nine voters so far were bunched in two groups. Does the result depend on that? Choose one of three new electorates with the buttons under the figure. One is bunched in the center, one is polarized into two camps, and one is skewed, with most voters on the left and a few far to the right.",
+        "Each time, both candidates start at the median voter’s ideal point. Try moving either one. No move does better than winning with probability 1/2, because the candidate who stays put keeps the median voter and everyone beyond. In the polarized electorate the median voter stands alone between the two camps, and the candidates still converge on that one voter, not on either camp and not on the mean.",
+        "The equilibrium follows the median voter wherever the voters happen to be. The distribution of voters decides where the median is, but not whether the candidates converge on it."
+      ] },
+    { title: "When the median voter moves", changes: ["line"], look: ["line", "count"],
+      vsl: { base: [0, 1, 1, 1, 7, 7.5, 8, 8.5], start: 6.5 },
+      sc: { vs: W, a: u(6.5), b: u(6.5), count: true, ranks: true, ring: true, tracked: u(6.5) }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Back to the nine voters. Move the median voter with the slider under the figure. The candidates go to the median each time.",
+      body: [
+        "What should the candidates do if the median voter’s ideal point changes? Both candidates start at the median, 6.5. Use the slider under the figure to move that voter, the 5th of the nine, to the left or right. Each time, the candidates locate at the median, so watch where they go.",
+        "As long as the voter stays between the voters at 1 and 7, there are still four voters on each side, it is still the median voter, and the candidates follow it. Once it passes one of those voters, the order changes. A different voter is now in the middle, and the candidates stop following the voter you are moving and stay with the new median voter.",
+        "The candidates don’t respond to any particular person. They respond to whoever is the median voter."
+      ] },
+    { title: "An even number of voters", changes: ["line"], look: ["line", "count"],
+      sl: { start: [6.5, 7], move: "both", ringStart: true, ringLabel: "a Nash equilibrium (any pair in the median interval is one)" },
+      sc: { vs: W_EVEN, a: u(6.5), b: u(7), count: true, centers: { median: true }, ranks: true, ring: true, ringLabel: "a Nash equilibrium (any pair in the median interval is one)" }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Back to the original nine voters, plus a tenth at 9.5. Move either candidate with the sliders under the figure.",
+      body: [
+        "Add a tenth voter at 9.5. With ten voters there are two middle ones, the 5th and the 6th, at 6.5 and 7. Every position between them, inclusive, is a median, so the median interval runs from 6.5 to 7.",
+        "With A at 6.5 and B at 7, the midpoint is 6.75. Each candidate is sure of five voters, the vote is tied, and each wins with probability 1/2.",
+        "Both sliders are free, and moving one puts the other back. Try to find a move that does better than the tie. None does. So (6.5, 7) is a Nash equilibrium, and so is any other pair of positions in the median interval."
+      ] },
+    { title: "Just outside the interval", changes: ["line"], look: ["line", "count"],
+      sl: { start: [6.4, 7], move: "B" },
+      sc: { vs: W_EVEN, a: u(6.4), b: u(7), count: true, centers: { median: true } }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "A at 6.4, just outside the median interval, is held there. Move B with its slider under the figure.",
+      body: [
+        "Now A starts just outside the interval, at 6.4, and B at 7. The midpoint is 6.7, each candidate is still sure of five voters, and they still tie. A candidate outside the median interval doesn’t always lose.",
+        "But it can always be beaten by one inside it. Hold A at 6.4 and move B to 6.5. The midpoint is 6.45, B is sure of six voters, and B wins. So (6.4, 7) is not an equilibrium. In equilibrium, both candidates are in the median interval."
+      ] },
+    { title: "Many voters", changes: ["line"], look: ["line", "count"],
+      sl: { start: [3, 7.5], move: "free", dens: ["uniform", "normal", "skew"] },
+      sc: { dens: "uniform", vs: [], a: u(3), b: u(7.5), count: true, centers: { median: true, mean: true } }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Choose a distribution with the buttons under the figure, and move either candidate.",
+      body: [
+        "With many voters, it is easier to picture them as a smooth distribution. The height of the curve shows how many voters have ideal points near each position, and the area under it adds up to all of the voters.",
+        "Each voter still votes for the closer candidate. So A gets every voter on its side of the midpoint, and A’s vote share is the area under the curve on that side, shaded in A’s color.",
+        "The median is now the point that splits the area in half, with 50% of the voters on each side. Choose a distribution and move either candidate. Whichever candidate is closer to the median gets more than half of the vote. With this many voters, an exact 50–50 split essentially never happens unless the candidates are in the same place, so coin flips no longer matter."
+      ] },
+    { title: "The equilibrium with many voters", changes: ["line"], look: ["line", "count"],
+      sl: { move: "both", dens: ["uniform", "normal", "skew"], atMedian: true, ringStart: true },
+      sc: { dens: "uniform", vs: [], a: u(5.5), b: u(5.5), count: true, centers: { median: true, mean: true }, ring: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Both candidates start at the median of the chosen distribution. Move either one with the sliders under the figure.",
+      body: [
+        "Now both candidates start at the median. Moving one puts the other back, so every move is a unilateral deviation. Try moving either candidate, for each distribution.",
+        "Every move away from the median puts the midpoint on the mover’s side of the median, so the other candidate gets more than half of the vote, and the mover goes from winning with probability 1/2 to losing. The equilibrium is at the median for the uniform, the normal and the skewed distribution alike.",
+        "In the skewed distribution the mean, 3.85, is to the right of the median, 3.5. A candidate who moves from the median to the mean, 3.85, gets only about 47% of the vote and loses."
+      ] },
+    { title: "Should A announce its own ideal point?", changes: ["line"], look: ["line", "count"],
+      sl: { start: [1, 7.5], move: "A", ideal: { A: 1, B: 7.5 } },
+      sc: { vs: W, a: u(1), b: u(7.5), count: true, centers: { median: true }, ideal: { A: u(1), B: u(7.5) } }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "Back to the nine voters. A’s ideal point is 1. B is held at its ideal point, 7.5. Move A with its slider under the figure.",
+      body: [
+        "So far the candidates have cared only about winning. Now suppose each cares only about the policy the winner puts in place. A’s ideal point is 1, and B’s is 7.5, where B has announced its position. Should A announce its position as 1?",
+        "If A stays at 1, the midpoint is 4.25, A gets only the four voters on the left, and B wins. Policy ends up at 7.5, a distance of 6.5 from A’s ideal point.",
+        "Hold B at 7.5 and move A to the right. A wins once it is closer to the median voter than B is, which is anywhere strictly between 5.5 and 7.5. At 5.5, B’s mirror image around the median, the median voter flips a coin. A winning position just above 5.5 puts policy a little more than 4.5 from A’s ideal point, much better than 6.5. A candidate who cares about policy still has to win to put any policy in place, and that pulls it toward the median voter."
+      ] },
+    { title: "Both candidates care about policy", changes: ["line"], look: ["line", "count"],
+      sl: { start: [6.5, 6.5], move: "both", ideal: { A: 1, B: 7.5 }, ringStart: true },
+      sc: { vs: W, a: u(6.5), b: u(6.5), count: true, centers: { median: true }, ideal: { A: u(1), B: u(7.5) }, ring: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "A’s ideal point is 1 and B’s is 7.5. Both start at the median, 6.5. Move either one with the sliders under the figure.",
+      body: [
+        "Now suppose both candidates care only about policy, with ideal points of 1 for A and 7.5 for B, and both know where the median voter is. Both start at the median voter’s ideal point, 6.5.",
+        "Try moving either candidate. A move away from 6.5 loses, so the other candidate wins and policy stays at 6.5. The mover is no worse off, but it is no better off either, since policy is exactly where it was. A deviation is profitable only if it makes the mover better off, so neither candidate has one, and (6.5, 6.5) is a Nash equilibrium.",
+        "At any other pair, one candidate can do better. As in the previous step, it can win with a position closer to its own ideal point than the policy it would otherwise get. So when they know where the median voter is, policy-motivated candidates converge on the median too."
+      ] },
+    { title: "The median voter theorem", changes: ["line"], look: ["line", "count"],
+      sc: { vs: W, a: u(6.5), b: u(6.5), count: true, centers: { median: true }, ranks: true, ring: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "The equilibrium for the nine voters: both candidates at the median voter’s ideal point, 6.5.",
+      body: [
+        "Everything in this walkthrough adds up to one result.",
+        "<div class='stmt' role='note' aria-label='The median voter theorem'><span class='stmt-head'>The median voter theorem (electoral version)</span>Suppose two office-seeking candidates compete in a plurality election, voters’ ideal points lie on one dimension, there is an odd number of voters with single-peaked (not necessarily symmetric) preferences, voters vote sincerely for the candidate they prefer, and candidates are committed to their announced positions. Then the unique Nash equilibrium is for both candidates to choose the median voter’s ideal point.</div>",
+        "Each part of it is something you found along the way.",
+        "<div><ul class='recap'><li>The equilibrium is at the median, not the mean, the mode or the middle of the policy space. At any other pair of positions, at least one candidate has a profitable deviation.</li>" +
+          "<li>The candidates follow whoever is the median voter, not a particular person.</li>" +
+          "<li>With an even number of voters, any pair of positions in the median interval is an equilibrium, so the equilibrium is no longer unique. That is why the theorem says the number of voters is odd.</li>" +
+          "<li>The same result holds with many voters spread along the line, and for candidates who care about policy, as long as they know where the median voter is.</li></ul></div>",
+        "This walkthrough used symmetric preferences, which is what gives the midpoint rule. The theorem doesn’t need symmetry. Without it, where each candidate’s winning region begins and ends changes, but the equilibrium is still at the median voter’s ideal point."
+      ] },
+    { title: "What the model assumed", changes: null, look: [],
+      sc: { vs: W, a: u(6.5), b: u(6.5), count: true, ring: true }, rows: ROWS_ALL, cards: { line: true, count: true },
+      sub: "The equilibrium for the nine voters.",
+      body: [
+        "The theorem rests on several assumptions. Policy is one dimension. Preferences are single-peaked. There are exactly two candidates, who know where the median voter is and are committed to the positions they announce. Everyone votes, and voters know the candidates’ positions."
+      ] }
+  ];
+
+  var step = 0, gPos = null, gMover = null, gChoice = 0;
+  var dotsEl = $("dots");
+  STEPS.forEach(function (st, i) {
+    var d = document.createElement("button");
+    d.type = "button"; d.className = "dot";
+    d.setAttribute("aria-label", "Step " + (i + 1) + ": " + st.title);
+    d.title = "Step " + (i + 1) + ": " + st.title;
+    d.addEventListener("click", function () { if (i === step) return; var p = step; step = i; renderGuided(p); });
+    dotsEl.appendChild(d);
+  });
+
+  /* ----- the sliders in a step: one per candidate, moved one at a time -----
+     sl: { start: [a, b], move: "A" | "B" | "both", ringStart, ringLabel, ideal, choices }.
+     A locked slider is disabled and says where it is held. With both free, moving one puts the
+     other back at its start, so every comparison is a unilateral deviation from the starting
+     pair. With ideal points, candidates care about policy and the readout speaks in distances.
+     With choices, buttons switch the electorate and both candidates start at its median. */
+  function voteLine(vs, a, b) {
+    var s = split(vs, a, b);
+    return a === b ? "Same position, so every voter is indifferent and flips a coin." : "Midpoint " + num((a + b) / 2) + ". A is sure of " + s.sa + ", B of " + s.sb + (s.k ? ", and " + s.k + (s.k === 1 ? " voter is indifferent" : " voters are indifferent") : "") + ".";
+  }
+  function moveRead(vs, st, a, b, mover) {
+    var line = voteLine(vs, a, b);
+    if (!mover) return "Both at their starting positions. " + line + " " + resultText(vs, a, b).text + ".";
+    var pos = mover === "A" ? a : b, p0 = mover === "A" ? st[0] : st[1];
+    var f = chance(vs, a, b, mover), f0 = chance(vs, st[0], st[1], mover);
+    function did(g, past) {
+      if (g.n === g.d) return past ? "won" : "wins";
+      if (g.n === 0) return past ? "lost" : "loses";
+      return (past ? "won" : "wins") + " with probability " + fstr(g);
+    }
+    if (pos === p0) return mover + " at its starting position, " + num(p0) + ". " + line + " " + mover + " " + did(f) + ".";
+    var c = cmp(f, f0);
+    return mover + " at " + num(pos) + ". " + line + " " + mover + " " + did(f) + ", where at " + num(p0) + " it " + did(f0, true) + ". " +
+      (c > 0 ? "A profitable deviation." : c < 0 ? "Worse than staying at " + num(p0) + "." : "No better than staying at " + num(p0) + ".");
+  }
+  /* Policy-motivated candidates: the expected distance between the policy put in place and the
+     mover's ideal point, in units of the line. Smaller is better. */
+  function expDist(vs, a, b, ideal) {
+    var f = chanceA(vs, a, b);
+    return (f.n * Math.abs(a - ideal) + (f.d - f.n) * Math.abs(b - ideal)) / f.d / U;
+  }
+  function dtext(d) { var r = Math.round(d * 100) / 100; return (Math.abs(d - r) < 1e-9 ? "" : "about ") + String(r); }
+  function policyRead(vs, st, a, b, mover, ideal) {
+    var line = voteLine(vs, a, b), f = chanceA(vs, a, b);
+    var out = f.n === f.d ? "A wins, so policy is " + num(a) : f.n === 0 ? "B wins, so policy is " + num(b) :
+      a === b ? "Every voter is indifferent, and policy is " + num(a) + " whoever wins" : "Coin flips decide, so policy is " + num(a) + " or " + num(b);
+    if (!mover) return "Both at their starting positions. " + line + " " + out + ".";
+    var pos = mover === "A" ? a : b, p0 = mover === "A" ? st[0] : st[1], id = u(ideal[mover]);
+    var d = expDist(vs, a, b, id), d0 = expDist(vs, st[0], st[1], id), uneven = f.n !== 0 && f.n !== f.d && a !== b;
+    var txt = mover + " at " + num(pos) + ". " + line + " " + out + ", " + (uneven ? "on average " : "") + dtext(d) + " from " + mover + "’s ideal point of " + num(id) + ".";
+    if (pos === p0) return txt;
+    return txt + " At " + num(p0) + " it was " + dtext(d0) + ". " + (d < d0 - 1e-9 ? "A profitable deviation." : d > d0 + 1e-9 ? "Worse than staying at " + num(p0) + "." : "No better than staying at " + num(p0) + ".");
+  }
+  function densRead(d, st, a, b, mover, free) {
+    var sa = densShareA(d, a, b);
+    var line = a === b ? "Same position, so every voter is indifferent." : "Midpoint " + num((a + b) / 2) + ". A gets " + pct(sa) + " of the vote and B " + pct(1 - sa) + ".";
+    var head = "The median is " + d.median + " and the mean is " + d.mean + ". ";
+    var r = densResult(d, a, b);
+    if (free || !mover) return head + "A at " + num(a) + ", B at " + num(b) + ". " + line + " " + r.text + ".";
+    var pos = mover === "A" ? a : b, p0 = mover === "A" ? st[0] : st[1];
+    function fOf(x, y) { var q = densResult(d, x, y).f; return mover === "A" ? q : { n: q.d - q.n, d: q.d }; }
+    var f = fOf(a, b), f0 = fOf(st[0], st[1]);
+    function did(g, past) { return g.n === g.d ? (past ? "won" : "wins") : g.n === 0 ? (past ? "lost" : "loses") : (past ? "won" : "wins") + " with probability 1/2"; }
+    if (pos === p0) return head + mover + " at its starting position, " + num(p0) + ". " + line + " " + mover + " " + did(f) + ".";
+    var c = cmp(f, f0);
+    return head + mover + " at " + num(pos) + ". " + line + " " + mover + " " + did(f) + ", where at " + num(p0) + " it " + did(f0, true) + ". " +
+      (c > 0 ? "A profitable deviation." : c < 0 ? "Worse than staying at " + num(p0) + "." : "No better than staying at " + num(p0) + ".");
+  }
+  function sliderHtml(who, val, locked) {
+    return "<div class='ctrl'><div class='ctrl-head'><label for='g" + who + "'>Candidate " + who + "’s position" + (locked ? " (held at " + num(val) + ")" : "") + "</label><span class='ctrl-val' id='g" + who + "v'></span></div>" +
+      "<input type='range' id='g" + who + "' min='0' max='10' step='0.1' value='" + num(val) + "'" + (locked ? " disabled" : "") + ">" +
+      "<div class='scale'><span>0</span><span>10</span></div></div>";
+  }
+  function slStart(s) {
+    if (s.sl.dens && s.sl.atMedian) { var dm = u(DENS[s.sl.dens[gChoice]].median); return [dm, dm]; }
+    if (s.sl.choices) { var m = median(U_(s.sl.choices[gChoice].vs))[0]; return [m, m]; }
+    return [u(s.sl.start[0]), u(s.sl.start[1])];
+  }
+  /* ----- a step that moves one voter: the candidates sit at the median each time ----- */
+  var gVoter = null;
+  function voterRead(base, t) {
+    var vs = base.concat([t]), md = median(vs)[0], n = vs.length;
+    var below = base.filter(function (z) { return z < t; }).length, above = base.filter(function (z) { return z > t; }).length;
+    var head = "The voter you are moving is at " + num(t) + ". ";
+    if (md === t && below < (n - 1) / 2 + 1 && above < (n - 1) / 2 + 1 && below === (n - 1) / 2 && above === (n - 1) / 2)
+      return head + ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"][below] + " voters are on each side of it, so it is still the median voter, and the candidates follow it to " + num(t) + ".";
+    if (md === t) return head + "It shares its ideal point with another voter, so the median is " + num(t) + " either way, and the candidates are at " + num(t) + ".";
+    return head + "It has passed the voter at " + num(md) + ", so it is no longer in the middle. The median voter is now the voter at " + num(md) + ", and the candidates stay at " + num(md) + " however much farther you move it.";
+  }
+  function buildVoterSlider(s) {
+    var host = $("stepCtrl"), base = U_(s.vsl.base);
+    host.innerHTML = "<div class='slider-box'><div class='ctrl'><div class='ctrl-head'><label for='gV'>The median voter’s ideal point</label><span class='ctrl-val' id='gVv'></span></div>" +
+      "<input type='range' id='gV' min='0' max='10' step='0.5' value='" + num(gVoter) + "'>" +
+      "<div class='scale'><span>0</span><span>10</span></div></div><p class='slider-read' id='gRead'></p>" +
+      "<div class='row-btns'><button class='btn' type='button' id='gReset'>Back to the start</button></div></div>";
+    function update(announce) {
+      var vs = base.concat([gVoter]), m = median(vs)[0];
+      var sc = { vs: vs, a: m, b: m, count: true, ranks: true, ring: true, tracked: gVoter };
+      drawLine(sc, s.sub);
+      renderCount(vs, m, m, ROWS_ALL);
+      var txt = voterRead(base, gVoter);
+      $("gRead").textContent = txt; $("gVv").textContent = num(gVoter);
+      $("gV").setAttribute("aria-valuetext", num(gVoter) + ". " + txt); $("gV").value = num(gVoter);
+      if (announce) say(txt);
+    }
+    $("gV").addEventListener("input", function () { gVoter = u(Number($("gV").value)); update(true); });
+    $("gReset").addEventListener("click", function () { gVoter = u(s.vsl.start); update(false); say("Back to the start. " + $("gRead").textContent); });
+    update(false);
+  }
+
+  function buildSliders(s) {
+    if (s.vsl) { buildVoterSlider(s); return; }
+    var host = $("stepCtrl"); host.innerHTML = "";
+    if (!s.sl) return;
+    var st = slStart(s), vs = s.sl.choices ? U_(s.sl.choices[gChoice].vs) : s.sl.dens ? [] : s.sc.vs, dn = s.sl.dens ? s.sl.dens[gChoice] : null;
+    var chooser = "";
+    if (s.sl.dens) {
+      chooser = "<span class='group-label' id='gChLabel'>Distribution of voters</span><div class='chips' role='group' aria-labelledby='gChLabel' style='margin-bottom: 16px;'>" +
+        s.sl.dens.map(function (k, i) { return "<button type='button' class='chip small' data-i='" + i + "' aria-pressed='" + (i === gChoice ? "true" : "false") + "'>" + DENS[k].t + "</button>"; }).join("") + "</div>";
+    }
+    if (s.sl.choices) {
+      chooser = "<span class='group-label' id='gChLabel'>Electorate</span><div class='chips' role='group' aria-labelledby='gChLabel' style='margin-bottom: 16px;'>" +
+        s.sl.choices.map(function (c, i) { return "<button type='button' class='chip small' data-i='" + i + "' aria-pressed='" + (i === gChoice ? "true" : "false") + "'>" + c.t + "</button>"; }).join("") + "</div>";
+    }
+    host.innerHTML = "<div class='slider-box'>" + chooser + sliderHtml("A", gPos[0], s.sl.move === "B") + sliderHtml("B", gPos[1], s.sl.move === "A") +
+      "<p class='slider-read' id='gRead'></p>" +
+      "<div class='row-btns'><button class='btn' type='button' id='gReset'>Back to the starting positions</button></div></div>";
+    function update(announce) {
+      var a = gPos[0], b = gPos[1], atStart = a === st[0] && b === st[1];
+      var ideal = s.sl.ideal ? { A: u(s.sl.ideal.A), B: u(s.sl.ideal.B) } : null;
+      var free = s.sl.move === "free";
+      var sc = { vs: vs, dens: dn, a: a, b: b, count: true, centers: s.sc.centers, ranks: s.sc.ranks, ideal: ideal,
+                 regionsFor: s.sc.regionsFor, regionsMover: s.sc.regionsMover,
+                 ghostA: !free && a !== st[0] ? st[0] : null, ghostB: !free && b !== st[1] ? st[1] : null,
+                 ring: s.sl.ringStart && atStart, ringLabel: s.sl.ringLabel };
+      countDens = s.sl.dens ? DENS[s.sl.dens[gChoice]] : null;
+      countSkip = s.sl.ideal ? { pa: 1, pb: 1, vsa: 1, vsb: 1 } : baseSkip();
+      drawLine(sc, s.sub);
+      renderCount(vs, a, b, ROWS_ALL, null, atStart || free ? null : { a: st[0], b: st[1], label: "At the start" },
+        atStart || free ? null : "The starting positions next to the current ones.");
+      var txt = dn ? densRead(DENS[dn], st, a, b, atStart ? null : gMover, free) : s.sl.ideal ? policyRead(vs, st, a, b, atStart ? null : gMover, s.sl.ideal) : moveRead(vs, st, a, b, atStart ? null : gMover);
+      $("gRead").textContent = txt;
+      ["A", "B"].forEach(function (w, i) { $("g" + w + "v").textContent = num(gPos[i]); $("g" + w).setAttribute("aria-valuetext", w + " at " + num(gPos[i]) + ". " + txt); $("g" + w).value = num(gPos[i]); });
+      if (announce) say(txt);
+    }
+    ["A", "B"].forEach(function (w, i) {
+      $("g" + w).addEventListener("input", function () {
+        gPos[i] = u(Number($("g" + w).value)); gMover = w;
+        if (s.sl.move === "both") gPos[1 - i] = st[1 - i];
+        update(true);
+      });
+    });
+    if (s.sl.dens) host.querySelectorAll(".chip").forEach(function (b) {
+      b.addEventListener("click", function () {
+        gChoice = Number(b.getAttribute("data-i")); gPos = slStart(s); gMover = null; buildSliders(s);
+        var d = DENS[s.sl.dens[gChoice]];
+        say(d.t + ". Voters are " + d.desc + ". The median is " + d.median + " and the mean is " + d.mean + ".");
+        host.querySelectorAll(".chip")[gChoice].focus();
+      });
+    });
+    if (s.sl.choices) host.querySelectorAll(".chip").forEach(function (b) {
+      b.addEventListener("click", function () {
+        gChoice = Number(b.getAttribute("data-i")); gPos = slStart(s); gMover = null; buildSliders(s);
+        var c = s.sl.choices[gChoice];
+        say(c.t + ". " + c.vs.length + " voters at " + voterList(U_(c.vs)) + ". Both candidates start at the median, " + num(gPos[0]) + ".");
+        host.querySelectorAll(".chip")[gChoice].focus();
+      });
+    });
+    $("gReset").addEventListener("click", function () { gPos = st.slice(); gMover = null; update(false); say("Back to the starting positions. " + $("gRead").textContent); });
+    update(false);
+  }
+
+  function renderGuided(prev) {
+    var s = STEPS[step], sc = s.sc;
+    showCards(s.cards);
+    if (s.vsl && (prev !== step || gVoter === null)) gVoter = u(s.vsl.start);
+    if (s.sl && (prev !== step || !gPos)) { if (prev !== step) gChoice = 0; gPos = slStart(s); gMover = null; }
+    countDens = sc.dens ? DENS[sc.dens] : null; countSkip = baseSkip();
+    drawLine(sc, s.sub);
+    renderCount(sc.vs, sc.a, sc.b, s.rows, s.fresh);
+    $("stepLabel").textContent = "Step " + (step + 1) + " of " + STEPS.length;
+    $("stepTitle").textContent = s.title;
+    $("stepBody").innerHTML = s.body.map(function (t) { return t.indexOf("<div") === 0 ? t : "<p>" + t + "</p>"; }).join("");
+    lookButtons($("stepLook"), s.look);
+    buildSliders(s);
+    $("prevBtn").disabled = step === 0;
+    $("nextBtn").textContent = step === STEPS.length - 1 ? "Go to practice" : "Next";
+    var dots = dotsEl.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = "dot" + (i === step ? " on" : "");
+      if (i === step) dots[i].setAttribute("aria-current", "step"); else dots[i].removeAttribute("aria-current");
+    }
+    if (prev !== undefined && step > prev && s.changes) bring(s.changes[0]);
+  }
+  $("prevBtn").addEventListener("click", function () { if (step > 0) { var p = step; step--; renderGuided(p); } });
+  $("nextBtn").addEventListener("click", function () { if (step < STEPS.length - 1) { var p = step; step++; renderGuided(p); } else selectMode("practice", true); });
+
+  /* ================= explore ================= */
+
+  var PRESETS = [
+    { id: "nine", t: "The walkthrough’s nine voters", vs: [0, 1, 1, 1, 6.5, 7, 7.5, 8, 8.5] },
+    { id: "clusters", t: "Two clusters", vs: [0.5, 1, 1.5, 2, 8, 8.5, 9.5] },
+    { id: "stacked", t: "Several voters at the median", vs: [2, 3, 5.5, 5.5, 5.5, 6, 9] },
+    { id: "even", t: "An even number of voters", vs: [1, 2.5, 3, 4.5, 7.5, 8, 9, 10] },
+    { id: "three", t: "Three indifferent voters", vs: [0.5, 2, 4.5, 4.5, 4.5, 6, 7, 8.5, 9], a: 3, b: 6 },
+    { id: "four", t: "Four indifferent voters", vs: [1, 3, 5.5, 7.5, 7.5, 7.5, 7.5, 9, 9.5], a: 6, b: 9 },
+    { id: "polar", t: "Polarized", vs: [0.5, 1, 1.5, 2, 7, 8, 8.5, 9, 9.5], a: 7, b: 7 }
+  ];
+  var MAXV = 15, MAXSTACK = 6;
+  var ev = U_(PRESETS[0].vs), evPreset = "nine";
+  var show = { median: false, mean: false, middle: false, mode: false, regions: false, ranks: false };
+  var start = null, checkOn = false, waysOpen = false;
+  var sA = $("sA"), sB = $("sB"), sV = $("sV");
+
+  function buildPresets() {
+    var host = $("presets"); host.innerHTML = "";
+    PRESETS.forEach(function (pr) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip small";
+      b.setAttribute("aria-pressed", evPreset === pr.id ? "true" : "false");
+      b.textContent = pr.t;
+      b.addEventListener("click", function () {
+        ev = U_(pr.vs); evPreset = pr.id; start = null; checkOn = false; waysOpen = false;
+        if (pr.a !== undefined) { sA.value = String(pr.a); sB.value = String(pr.b); }
+        buildPresets(); renderExplore();
+        say("Voters reset. " + ev.length + " voters at " + voterList(ev) + "." + (pr.a !== undefined ? " A at " + num(u(pr.a)) + " and B at " + num(u(pr.b)) + "." : ""));
+      });
+      host.appendChild(b);
+    });
+  }
+  function buildVoterList() {
+    var host = $("voterList"); host.innerHTML = "";
+    var st = {}, keys = [];
+    sorted(ev).forEach(function (z) { if (!st[z]) { st[z] = 0; keys.push(z); } st[z]++; });
+    keys.forEach(function (z) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip small";
+      b.innerHTML = "<span class='data'>" + num(z) + "</span>" + (st[z] > 1 ? " ×" + st[z] : "") + "<span class='x' aria-hidden='true'>✕</span>";
+      b.setAttribute("aria-label", "Remove a voter at " + num(z) + (st[z] > 1 ? " (" + st[z] + " voters there)" : ""));
+      b.disabled = ev.length <= 1;
+      b.addEventListener("click", function () {
+        var i = ev.indexOf(z); if (i < 0 || ev.length <= 1) return;
+        ev.splice(i, 1); evPreset = null; checkOn = false; buildPresets(); renderExplore();
+        say("Removed a voter at " + num(z) + ". " + ev.length + " voters.");
+        var first = $("voterList").querySelector("button"); if (first) first.focus();
+      });
+      host.appendChild(b);
+    });
+  }
+  function voterNote() {
+    var z = u(Number(sV.value)), here = ev.filter(function (x) { return x === z; }).length;
+    var full = ev.length >= MAXV, tall = here >= MAXSTACK;
+    $("addVoter").disabled = full || tall;
+    $("voterNote").textContent = full ? "That’s the most voters this tool shows (" + MAXV + "). Remove one to add another." :
+      tall ? "There are already " + MAXSTACK + " voters at " + num(z) + ", the most one point can hold here." :
+      ev.length + " voters now. Up to " + MAXV + " in all, and " + MAXSTACK + " at any one point.";
+  }
+
+  function exploreVerdict(a, b) {
+    var fa = chanceA(ev, a, b), s = split(ev, a, b), v, w;
+    if (a === b) { v = "Each wins with probability 1/2."; w = "The candidates are in the same place, so every voter is indifferent and flips a coin."; }
+    else {
+      var coin = s.k ? (s.k === 1 ? " One voter is exactly at the midpoint, so is indifferent and flips a coin." :  " " + cap1(cnt(s.k, "voter", "voters")) + " are exactly at the midpoint, so are indifferent and flip coins.") : "";
+      if (fa.n === fa.d) v = "A wins for sure.";
+      else if (fa.n === 0) v = "B wins for sure.";
+      else v = "A wins with probability " + fstr(fa) + ", and B with probability " + fstr({ n: fa.d - fa.n, d: fa.d }) + ".";
+      w = "The midpoint is " + num((a + b) / 2) + ". A is sure of " + s.sa + (s.sa === 1 ? " voter" : " voters") + " and B of " + s.sb + "." + coin +
+        (ev.length % 2 === 0 && s.k === 0 && s.sa === s.sb ? " The vote is tied, so a coin toss settles it." : "");
+    }
+    return { v: v, w: w };
+  }
+  /* the coin flips: how many A needs, and how many of the equally likely ways give it that */
+  function coinParts(a, b) {
+    var s = split(ev, a, b), k = s.k, win = 0, tie = 0, needA = null, tieAt = null;
+    for (var j = 0; j <= k; j++) {
+      var va = s.sa + j, vb = s.sb + k - j;
+      if (va > vb) { win += comb(k, j); if (needA === null) needA = j; }
+      else if (va === vb) { tie += comb(k, j); tieAt = j; }
+    }
+    return { s: s, k: k, win: win, tie: tie, needA: needA, tieAt: tieAt, tot: Math.pow(2, k) };
+  }
+  function coinText(a, b) {
+    var c = coinParts(a, b), k = c.k;
+    if (a === b) return "Every way the coins can land that gives A a majority is matched by the opposite way, with every vote switched, that gives B a majority, so each candidate wins with probability 1/2.";
+    if (k === 0) return "";
+    var who = k === 1 ? "The indifferent voter isn’t" : "The indifferent voters aren’t";
+    if (c.win === c.tot) return who + " pivotal. A has a majority from its sure votes alone, so it wins however " + (k === 1 ? "that voter votes." : "they vote.");
+    if (c.win === 0 && c.tie === 0) return who + " pivotal. B has a majority from its sure votes alone, so it wins however " + (k === 1 ? "that voter votes." : "they vote.");
+    var t = (k === 1 ? "The indifferent voter is pivotal. " : "The indifferent voters are pivotal. ");
+    if (k === 1) {
+      var out = function (j) { var va = c.s.sa + j, vb = c.s.sb + 1 - j; return va > vb ? "A wins" : va < vb ? "B wins" : "the vote is tied and a coin toss settles it"; };
+      return t + "If that voter votes for A, " + out(1) + ". If it votes for B, " + out(0) + ". So A wins with probability " + fstr(chanceA(ev, a, b)) + ".";
+    }
+    var prod = []; for (var q = 0; q < k; q++) prod.push("2");
+    t += c.needA !== null ? "A needs at least " + c.needA + " of the " + k + " indifferent voters to win" + (c.tieAt !== null ? ", and exactly " + c.tieAt + " gives a tie, which a coin toss settles" : "") + ". "
+                          : "A can at best tie, with all " + k + " of the indifferent voters, and a coin toss settles a tie. ";
+    t += "Of the " + prod.join(" × ") + " = " + c.tot + " equally likely ways they can vote, " + c.win + (c.win === 1 ? " gives" : " give") + " A a majority" +
+      (c.tie ? " and " + c.tie + (c.tie === 1 ? " gives" : " give") + " a tie, so A wins with probability (" + c.win + " + " + c.tie + " × 1/2) / " + c.tot + " = " + fstr(chanceA(ev, a, b))
+             : ", so A wins with probability " + c.win + "/" + c.tot + (fstr(chanceA(ev, a, b)) === c.win + "/" + c.tot ? "" : " = " + fstr(chanceA(ev, a, b)))) + ".";
+    return t;
+  }
+  /* the table of ways k indifferent voters can vote; patterns listed only when k is 4 or less */
+  function waysTable(a, b) {
+    var c = coinParts(a, b), k = c.k, mid = (a + b) / 2;
+    function res(j) { var va = c.s.sa + j, vb = c.s.sb + k - j; return va > vb ? "A" : va < vb ? "B" : "Tie"; }
+    function cls(j) { var r = res(j); return r === "A" ? " class='win-A'" : r === "B" ? " class='win-B'" : ""; }
+    var cols = []; for (var j = 0; j <= k; j++) cols.push([]);
+    if (k <= 4) for (var m = Math.pow(2, k) - 1; m >= 0; m--) {
+      var pat = [], n = 0;
+      for (var i = k - 1; i >= 0; i--) { var x = (m >> i) & 1; pat.push(x ? "A" : "B"); n += x; }
+      cols[n].push(pat.join(""));
+    }
+    var h = "<div class='table-scroll'><table class='split'><caption>The " + c.tot + " ways the " + k + " voters at " + num(mid) + " can vote, and who wins</caption>";
+    h += "<thead><tr><th scope='row'>Votes for A</th>" + cols.map(function (z, j) { return "<th scope='col'" + cls(j) + ">" + j + "</th>"; }).join("") + "</tr></thead><tbody>";
+    h += "<tr><th scope='row'>Ways</th>" + cols.map(function (z, j) { return "<td" + cls(j) + "><strong>" + comb(k, j) + "</strong></td>"; }).join("") + "</tr>";
+    h += "<tr><th scope='row'>Winner</th>" + cols.map(function (z, j) { return "<td" + cls(j) + ">" + res(j) + "</td>"; }).join("") + "</tr>";
+    if (k <= 4) h += "<tr><th scope='row'>Patterns</th>" + cols.map(function (z, j) { return "<td" + (cls(j) ? cls(j).replace("class='", "class='pats ") : " class='pats'") + ">" + z.join("<br>") + "</td>"; }).join("") + "</tr>";
+    return h + "</tbody></table></div>";
+  }
+  /* comparing the current positions with the starting ones: one candidate has moved */
+  function moveText(a, b) {
+    if (!start) return "";
+    var mover = a !== start.a ? "A" : b !== start.b ? "B" : null;
+    if (!mover) return "Both candidates are at their starting positions. Move one to try a unilateral deviation.";
+    var p0 = mover === "A" ? start.a : start.b, p1 = mover === "A" ? a : b, other = mover === "A" ? "B" : "A", po = mover === "A" ? b : a;
+    var f0 = chance(ev, start.a, start.b, mover), f1 = chance(ev, a, b, mover), c = cmp(f1, f0);
+    return mover + " moved from " + num(p0) + " to " + num(p1) + ", with " + other + " still at " + num(po) + ". " + mover + "’s probability of winning went from " + fstr(f0) + " to " + fstr(f1) + ". " +
+      (c > 0 ? "A profitable deviation." : c < 0 ? "Worse than staying at " + num(p0) + "." : "No better than staying at " + num(p0) + ".");
+  }
+  function checkText(a, b) {
+    var e = eqVerdict(ev, a, b);
+    function mv(who, m) { return who + " could move to " + num(m.example) + " and raise its probability of winning from " + fstr(chance(ev, a, b, who)) + " to " + fstr(m.best) + "."; }
+    if (e.v === "yes") return "Yes, this is a Nash equilibrium. With B held at " + num(b) + ", no move raises A’s probability of winning, and with A held at " + num(a) + ", no move raises B’s.";
+    var t = "No, this is not a Nash equilibrium.";
+    if (e.dA) t += " " + mv("A", e.A);
+    if (e.dB) t += " " + mv("B", e.B);
+    return t;
+  }
+  function renderExplore(announce) {
+    var a = u(Number(sA.value)), b = u(Number(sB.value));
+    $("oA").textContent = num(a); sA.setAttribute("aria-valuetext", "A at " + num(a));
+    $("oB").textContent = num(b); sB.setAttribute("aria-valuetext", "B at " + num(b));
+    $("oV").textContent = num(u(Number(sV.value))); sV.setAttribute("aria-valuetext", num(u(Number(sV.value))));
+    showCards({ line: true, count: true });
+    drawLine({ vs: ev, a: a, b: b, count: true, centers: show, ranks: show.ranks, regionsFor: show.regions ? a : null,
+               ghostA: start && start.a !== a ? start.a : null, ghostB: start && start.b !== b ? start.b : null,
+               ring: checkOn && eqVerdict(ev, a, b).v === "yes", ghostWord: "start" },
+             start ? "Your electorate. Hollow markers show the starting positions." : "Your electorate.");
+    renderCount(ev, a, b, true, null, start ? { a: start.a, b: start.b, label: "Starting" } : null, start ? "The starting positions next to the current ones." : null);
+    var vd = exploreVerdict(a, b), ct = coinText(a, b), k = a === b ? 0 : split(ev, a, b).k;
+    $("verdict").textContent = vd.v; $("vWhy").textContent = vd.w;
+    $("vCoins").textContent = ct; $("vCoins").hidden = !ct;
+    var canWays = !!ct && k >= 2 && cmpWays(a, b);
+    $("countWaysRow").hidden = !canWays;
+    if (!canWays) waysOpen = false;
+    $("waysBtn").textContent = waysOpen ? "Hide the count" : "Show the count"; $("waysBtn").setAttribute("aria-expanded", waysOpen ? "true" : "false");
+    $("waysTable").hidden = !waysOpen; $("waysTable").innerHTML = waysOpen ? waysTable(a, b) : "";
+    var mt = moveText(a, b); $("vMove").textContent = mt; $("vMove").hidden = !mt;
+    if (checkOn) { $("vCheck").textContent = checkText(a, b); $("vCheckBox").hidden = false; } else $("vCheckBox").hidden = true;
+    $("startBtn").textContent = start ? "Set these as the starting positions instead" : "Set these as the starting positions";
+    $("backBtn2").hidden = !start || (start.a === a && start.b === b); $("clearStartBtn").hidden = !start;
+    buildVoterList(); voterNote();
+    if (announce) say(vd.v + (mt && (a !== start.a || b !== start.b) ? " " + mt : ""));
+  }
+  /* the count is worth showing only when the coin flips can go either way */
+  function cmpWays(a, b) { var c = coinParts(a, b); return c.win !== c.tot && (c.win > 0 || c.tie > 0); }
+  [sA, sB].forEach(function (s) { s.addEventListener("input", function () {
+    /* with starting positions set, moving one candidate puts the other back */
+    if (start) { if (s === sA) sB.value = String(start.b / U); else sA.value = String(start.a / U); }
+    checkOn = false; renderExplore(true);
+  }); });
+  $("waysBtn").addEventListener("click", function () { waysOpen = !waysOpen; renderExplore(); say(waysOpen ? "The count is shown under the button." : "The count is hidden."); });
+  sV.addEventListener("input", function () { $("oV").textContent = num(u(Number(sV.value))); sV.setAttribute("aria-valuetext", num(u(Number(sV.value)))); voterNote(); });
+  $("addVoter").addEventListener("click", function () {
+    var z = u(Number(sV.value));
+    if (ev.length >= MAXV || ev.filter(function (x) { return x === z; }).length >= MAXSTACK) return;
+    ev.push(z); evPreset = null; checkOn = false; buildPresets(); renderExplore();
+    say("Added a voter at " + num(z) + ". " + ev.length + " voters.");
+  });
+  $("startBtn").addEventListener("click", function () {
+    start = { a: u(Number(sA.value)), b: u(Number(sB.value)) }; renderExplore();
+    say("Starting positions set: A at " + num(start.a) + " and B at " + num(start.b) + ". Moving one candidate now puts the other back.");
+  });
+  $("backBtn2").addEventListener("click", function () {
+    sA.value = String(start.a / U); sB.value = String(start.b / U); checkOn = false; renderExplore(); $("startBtn").focus();
+    say("Back to the starting positions, A at " + num(start.a) + " and B at " + num(start.b) + ".");
+  });
+  $("clearStartBtn").addEventListener("click", function () { start = null; renderExplore(); $("startBtn").focus(); say("Starting positions cleared. The sliders move freely."); });
+  [["tMedian", "median"], ["tMean", "mean"], ["tMiddle", "middle"], ["tMode", "mode"], ["tRanks", "ranks"], ["tRegions", "regions"]].forEach(function (t) {
+    $(t[0]).addEventListener("click", function () {
+      show[t[1]] = !show[t[1]]; $(t[0]).setAttribute("aria-pressed", show[t[1]] ? "true" : "false"); renderExplore();
+      if (t[1] === "regions" && show.regions) { say(regionText(ev, u(Number(sA.value)))); bring("line"); }
+      else if (t[1] === "ranks") say(show.ranks ? "The voters are numbered in order from left to right." : "Voter numbers hidden.");
+      else say($(t[0]).textContent + (show[t[1]] ? " shown." : " hidden."));
+    });
+  });
+  $("checkBtn").addEventListener("click", function () {
+    checkOn = true; renderExplore();
+    say(checkText(u(Number(sA.value)), u(Number(sB.value))));
+  });
+
+  /* ================= practice ================= */
+
+  var GROUPS = [
+    { id: "g1", label: "An odd number of voters", desc: "" },
+    { id: "g2", label: "Moving a voter at the edge", desc: "Cases 2 and 3 differ in one voter, so they are worth comparing." },
+    { id: "g3", label: "Several voters at one point", desc: "In these cases several voters can be indifferent at once." },
+    { id: "g4", label: "An even number of voters", desc: "Case 7 is Case 1 with one more voter, so the two are worth comparing." },
+    { id: "g5", label: "The median far from the middle of the policy space", desc: "" },
+    { id: "g6", label: "Many voters spread evenly", desc: "Voters are spread evenly over part of the line, so vote shares are lengths you can work out by hand." },
+    { id: "g7", label: "A candidate who cares about policy", desc: "" }
+  ];
+  /* Each discrete case: voters; cnt = the pair for counting votes; moves = A's moves to check with B fixed;
+     rA = A's position for the challenger question; eq = the pair for the equilibrium question;
+     prob = ask for A's probability of winning at the counting pair (only where voters sit at the midpoint).
+     Uniform cases: lo and hi of the distribution, cnt and eq. The policy case: voters, A's ideal point,
+     B's position and the positions A might announce. Every answer is computed from these by the
+     model above. Kept clear of every electorate and pair of positions in the Week 2 notes and
+     problem bank, and of the walkthrough. */
+  var CASES = [
+    { id: "1", group: "g1", vs: [0.5, 2, 3.5, 7.5, 8, 8, 9], cnt: [6.5, 8.5], prob: true, moves: [3, 6, 7, 8], rA: 6, eq: [5.5, 5.5] },
+    { id: "2", group: "g2", vs: [1, 1.5, 2, 2, 3.5, 5, 5.5], cnt: [2.5, 4.5], moves: [1, 1.5, 3, 5], rA: 3, eq: [2, 2] },
+    { id: "3", group: "g2", vs: [1, 1.5, 2, 2, 3.5, 5, 10], cnt: [4, 2], moves: [1, 2, 3, 5], rA: 4, eq: [2.5, 3.5] },
+    { id: "4", group: "g3", vs: [0.5, 3.5, 3.5, 3.5, 6, 7.5, 9.5], cnt: [6, 1], prob: true, moves: [2, 3, 4.5, 7], rA: 2.5, eq: [3.5, 3.5] },
+    { id: "5", group: "g3", vs: [1.5, 2.5, 4.5, 8, 8, 8, 8, 8, 9.5], cnt: [7, 9], prob: true, moves: [5, 7.5, 8.5, 9.5], rA: 9, eq: [8, 7] },
+    { id: "6", group: "g3", vs: [0.5, 1.5, 3, 4.5, 5.5, 7.5, 7.5, 7.5, 9.5], cnt: [9, 6], moves: [5, 5.5, 7, 8], rA: 3, eq: [5.5, 7.5] },
+    { id: "7", group: "g4", vs: [0.5, 2, 3.5, 7.5, 8, 8, 9, 9.5], cnt: [5, 9], moves: [6, 7.5, 8, 9.5], rA: 6, eq: [7.5, 8] },
+    { id: "8", group: "g4", vs: [1, 1.5, 2, 3.5, 7, 8.5, 9, 9.5], cnt: [8.5, 2], moves: [1.5, 3.5, 5.5, 7.5], rA: 8.5, eq: [3.5, 7] },
+    { id: "9", group: "g4", vs: [0.5, 1.5, 3.5, 7, 7, 8.5, 9, 10], cnt: [4, 8.5], moves: [3, 5.5, 7, 8], rA: 5, eq: [6.5, 7] },
+    { id: "10", group: "g5", vs: [0, 0.5, 1, 1.5, 1.5, 3, 7.5, 9.5, 10], cnt: [4.5, 8.5], moves: [1.5, 2.5, 5, 8], rA: 0.5, eq: [3.5, 1.5] },
+    { id: "11", group: "g6", kind: "uniform", lo: 2, hi: 10, cnt: [3, 7], eq: [5, 6] },
+    { id: "12", group: "g6", kind: "uniform", lo: 1, hi: 6, cnt: [4.5, 2], eq: [3.5, 3.5] },
+    { id: "13", group: "g7", kind: "policy", vs: [0.5, 2, 3, 4.5, 5.5, 6.5, 8, 9, 9.5], idealA: 1.5, b: 8, choices: [1.5, 3, 3.5, 5.5] }
+  ];
+  /* Where the correct option should sit in questions 1, 2 and 4, and in the probability question
+     (position 1 = first), varied across the bank. */
+  var TARGETS = [[3, 2, 1, 2], [2, 4, 3, 1], [1, 3, 2, 1], [4, 1, 3, 4], [2, 3, 1, 3], [1, 3, 2, 1], [4, 2, 2, 1], [3, 4, 1, 1], [1, 1, 3, 1], [2, 3, 2, 1], [3, 2, 1, 1], [1, 4, 1, 1], [2, 1, 1, 1]];
+  function makeUniform(lo, hi) {
+    return { t: "Uniform", desc: "spread evenly from " + lo + " to " + hi, median: (lo + hi) / 2, mean: (lo + hi) / 2, fmax: 1 / (hi - lo), lo: lo, hi: hi,
+      f: function (x) { return x >= lo && x <= hi ? 1 / (hi - lo) : 0; },
+      F: function (x) { return Math.min(1, Math.max(0, (x - lo) / (hi - lo))); } };
+  }
+  CASES.forEach(function (c, i) {
+    c.target = TARGETS[i];
+    c.kind = c.kind || "discrete";
+    if (c.kind === "discrete") c.piv = split(U_(c.vs), u(c.cnt[0]), u(c.cnt[1])).k > 0;
+    if (c.kind === "uniform") { c.d = makeUniform(c.lo, c.hi); c.v = []; c.a = u(c.cnt[0]); c.b = u(c.cnt[1]); c.ea = u(c.eq[0]); c.eb = u(c.eq[1]); c.opts = buildUniformOptions(c); return; }
+    if (c.kind === "policy") { c.v = U_(c.vs); c.ia = u(c.idealA); c.pb = u(c.b); c.ch = U_(c.choices); c.opts = { 1: buildOptions({ v: c.v, a: c.ch[0], b: c.pb, ra: c.ch[0], target: c.target, skip: true })[1] }; return; }
+    c.v = U_(c.vs); c.a = u(c.cnt[0]); c.b = u(c.cnt[1]); c.mv = U_(c.moves); c.ra = u(c.rA); c.ea = u(c.eq[0]); c.eb = u(c.eq[1]);
+    c.opts = buildOptions(c);
+  });
+
+  /* ----- options, with distractors from real mistakes ----- */
+  function ptKey(lo, hi) { return lo + ":" + hi; }
+  function ptText(lo, hi) { return lo === hi ? num(lo) : "From " + num(lo) + " to " + num(hi); }
+  function buildOptions(c) {
+    var vs = c.v, s = sorted(vs), n = s.length, md = median(vs), o = {};
+
+    /* 1. the median */
+    var pool1 = [], mean = meanU(vs), meanR = Math.round(mean / 4) * 4;
+    var distinct = s.filter(function (z, i) { return i === 0 || z !== s[i - 1]; });
+    var dmed = distinct.length % 2 ? [distinct[(distinct.length - 1) / 2], distinct[(distinct.length - 1) / 2]] : [distinct[distinct.length / 2 - 1], distinct[distinct.length / 2]];
+    pool1.push({ lo: meanR, hi: meanR, why: "mean" });                       /* the mean */
+    pool1.push({ lo: TOP / 2, hi: TOP / 2, why: "middle" });                 /* the middle of the policy space */
+    var mo = modes(vs); if (mo.length === 1) pool1.push({ lo: mo[0], hi: mo[0], why: "mode" });   /* the mode */
+    pool1.push({ lo: dmed[0], hi: dmed[1], why: "distinct" });               /* the median of the listed positions, ignoring stacks */
+    if (md[0] !== md[1]) { pool1.push({ lo: md[0], hi: md[0], why: "half" }); pool1.push({ lo: md[1], hi: md[1], why: "half" }); }
+    else if (n % 2 === 0) { pool1.push({ lo: s[n / 2 - 2], hi: s[n / 2 + 1], why: "half" }); }
+    /* counting to the wrong voter: the nearest ideal point on either side of the median */
+    var below = s.filter(function (z) { return z < md[0]; }), above = s.filter(function (z) { return z > md[1]; });
+    if (below.length) pool1.push({ lo: below[below.length - 1], hi: below[below.length - 1], why: "off" });
+    if (above.length) pool1.push({ lo: above[0], hi: above[0], why: "off" });
+    o[1] = pickTarget({ lo: md[0], hi: md[1], why: "right" }, pool1, 3, c.target[0]);
+    if (c.skip) return o;
+
+    /* 2. sure votes for A */
+    var sp = split(vs, c.a, c.b), right2 = sp.sa;
+    var atOrBeyond = vs.filter(function (z) { return c.a < c.b ? z <= c.a : z >= c.a; }).length;     /* only the voters at or beyond A */
+    var sideOfMid5 = vs.filter(function (z) { return c.a < c.b ? z < TOP / 2 : z > TOP / 2; }).length; /* splitting at the middle of the policy space */
+    var sideOfMed = vs.filter(function (z) { return c.a < c.b ? z < md[0] : z > md[1]; }).length;      /* splitting at the median */
+    var pool2 = [sp.sb, atOrBeyond, sideOfMid5, sideOfMed, sp.sa + sp.k, sp.sa - 1, sp.sa + 1, sp.sa - 2, sp.sa + 2]
+      .filter(function (x) { return x >= 0 && x <= n; })
+      .map(function (x) { return { lo: x, hi: x }; });
+    o[2] = pickTarget({ lo: right2, hi: right2, why: "right" }, pool2, 3, c.target[1]);
+    /* 2p. A's probability of winning, when voters sit at the midpoint */
+    if (c.prob) {
+      var fA = chanceA(vs, c.a, c.b), sp2 = split(vs, c.a, c.b), kk = sp2.k, need = needOf(sp2.sa, sp2.sb, kk);
+      var val = function (f) { return Math.round(f.n / f.d * 1e6); };
+      var poolP = [];
+      function addP(f, why) { poolP.push({ lo: val(f), hi: val(f), f: f, why: why }); }
+      addP({ n: 1, d: 2 }, "even");                                         /* assuming coin flips mean an even chance */
+      addP({ n: fA.d - fA.n, d: fA.d }, "other");                           /* B's probability instead of A's */
+      if (need.a <= kk) addP(frac(comb(kk, need.a), Math.pow(2, kk)), "exact");   /* only the ways A gets exactly what it needs */
+      var maj = 0; for (var j = 0; j <= kk; j++) if (2 * j > kk) maj += comb(kk, j);
+      addP(frac(maj, Math.pow(2, kk)), "nosure");                           /* ignoring the sure votes: a majority of the coin flips */
+      addP(frac(1, Math.pow(2, kk)), "all");                                /* thinking A needs all of them */
+      [{ n: 0, d: 1 }, { n: 1, d: 4 }, { n: 3, d: 4 }, { n: 1, d: 1 }].forEach(function (f) { addP(f, "other2"); });
+      var right = { lo: val(fA), hi: val(fA), f: fA, why: "right" };
+      o["2p"] = pickTarget(right, poolP, 3, c.target[3], true);
+    }
+
+    /* 4. where B can win for sure, given A */
+    var wins = winIntervals(vs, c.ra), right4 = wins.length ? { lo: wins[0].lo, hi: wins[0].hi, why: "right" } : { lo: -1, hi: -1, why: "right" };
+    var pool4 = [];
+    function mirrorAround(cent) { var m = 2 * cent - c.ra; return m > c.ra ? { lo: c.ra, hi: Math.min(m, TOP) } : { lo: Math.max(m, 0), hi: c.ra }; }
+    pool4.push(mirrorAround(meanU(vs)));          /* mirror image around the mean */
+    pool4.push(mirrorAround(TOP / 2));            /* around the middle of the policy space */
+    var mdn = c.ra < md[0] ? md[0] : md[1];
+    pool4.push(c.ra < mdn ? { lo: c.ra, hi: mdn } : { lo: mdn, hi: c.ra });   /* only as far as the median */
+    pool4.push(mirrorAround(md[0] === md[1] ? md[0] : (c.ra < md[0] ? md[1] : md[0])));  /* around the other end of the median interval */
+    pool4.push(c.ra < md[0] ? { lo: c.ra, hi: TOP } : { lo: 0, hi: c.ra });  /* anywhere on the median's side of A */
+    pool4.push(c.ra < md[0] ? { lo: 0, hi: c.ra } : { lo: c.ra, hi: TOP });  /* outside A, on the far side from the median */
+    pool4 = pool4.map(function (iv) { return { lo: Math.round(iv.lo / 20) * 20, hi: Math.round(iv.hi / 20) * 20 }; })
+      .filter(function (iv) { return iv.hi > iv.lo; });
+    o[4] = pickTarget(right4, pool4, 2, c.target[2]).concat(right4.lo < 0 ? [] : [{ lo: -1, hi: -1, why: "none" }]);
+    return o;
+  }
+  /* options for the uniform cases: the median and A's vote share */
+  function buildUniformOptions(c) {
+    var d = c.d, o = {}, lo = c.lo, hi = c.hi, m = d.median;
+    var pool1 = [[5, "middle"], [hi / 2, "half"], [lo + (hi - lo) / 4, "quarter"], [hi - (hi - lo) / 4, "quarter"], [(c.cnt[0] + c.cnt[1]) / 2, "candmid"]]
+      .map(function (q) { return { lo: u(q[0]), hi: u(q[0]), why: q[1] }; });
+    o[1] = pickTarget({ lo: u(m), hi: u(m), why: "right" }, pool1, 3, c.target[0]);
+    var sa = densShareA(d, c.a, c.b), mid = (c.cnt[0] + c.cnt[1]) / 2, aLeft = c.cnt[0] < c.cnt[1];
+    var key = function (x) { return Math.round(x * 1000); };
+    var pool2 = [[aLeft ? mid / 10 : 1 - mid / 10, "line"], [1 - sa, "other"], [0.5, "even"], [aLeft ? (mid - lo) / 10 : (hi - mid) / 10, "length10"]]
+      .map(function (q) { return { lo: key(q[0]), hi: key(q[0]), x: q[0], why: q[1] }; });
+    o[2] = pickTarget({ lo: key(sa), hi: key(sa), x: sa, why: "right" }, pool2, 3, c.target[1], true);
+    return o;
+  }
+  /* equilibrium check with a continuous distribution: try every position on the 1/40 grid */
+  function densEq(d, a, b) {
+    function fOf(x, y, who) { var q = densResult(d, x, y).f; return who === "A" ? q : { n: q.d - q.n, d: q.d }; }
+    var res = {}, m = u(d.median);
+    ["A", "B"].forEach(function (w) {
+      var cur = fOf(a, b, w), best = cur, at = [];
+      for (var x = 0; x <= TOP; x++) {
+        var f = w === "A" ? fOf(x, b, "A") : fOf(a, x, "B"), c0 = cmp(f, best);
+        if (c0 > 0) { best = f; at = [x]; } else if (c0 === 0 && cmp(best, cur) > 0) at.push(x);
+      }
+      /* the example: a half-point position if one works, closest to the median */
+      var half = at.filter(function (x) { return x % 20 === 0; }), pool = half.length ? half : at;
+      pool.sort(function (x, y) { return Math.abs(x - m) - Math.abs(y - m); });
+      res["d" + w] = cmp(best, cur) > 0; res[w] = { best: best, example: pool.length ? pool[0] : null, cur: cur };
+    });
+    res.v = !res.dA && !res.dB ? "yes" : res.dA && res.dB ? "both" : res.dA ? "A" : "B";
+    return res;
+  }
+  /* how many of k indifferent voters A needs to win outright, and to tie, given sure votes */
+  function needOf(sa, sb, k) {
+    var a = null, tie = null;
+    for (var j = 0; j <= k; j++) { if (a === null && sa + j > sb + k - j) a = j; if (tie === null && sa + j === sb + k - j) tie = j; }
+    return { a: a === null ? k + 1 : a, tie: tie };
+  }
+  /* The correct option plus k distractors from the pool, listed smallest first. The distractors are
+     all real mistakes; which ones are used is chosen so that the correct answer lands at position
+     `target` (1 = first) where the pool allows, so its position varies across the bank. */
+  function pickTarget(right, pool, k, target, free) {
+    var key = function (p) { return p.lo * 1000 + p.hi; }, seen = {}, lo = [], hi = [];
+    seen[key(right)] = 1;
+    pool.forEach(function (p) {
+      if (seen[key(p)] || p.lo < 0 || (!free && p.hi > TOP)) return;
+      seen[key(p)] = 1;
+      (key(p) < key(right) ? lo : hi).push(p);
+    });
+    var nLo = Math.min(target - 1, lo.length), nHi = Math.min(k - nLo, hi.length);
+    nLo = Math.min(k - nHi, lo.length);
+    var out = lo.slice(0, nLo).concat([right], hi.slice(0, nHi));
+    return out.sort(function (x, y) { return key(x) - key(y); });
+  }
+
+  var pc = null, pStage = 1, pFirst = true, pDone = {}, pStats = { done: 0, clean: 0 };
+  var sel3 = {};
+
+  function buildPicker() {
+    var host = $("casePicker"); host.innerHTML = "";
+    GROUPS.forEach(function (g) {
+      var wrap = document.createElement("div"); wrap.className = "chips-group";
+      var lab = document.createElement("span"); lab.className = "group-label"; lab.id = "plab-" + g.id; lab.textContent = g.label;
+      wrap.appendChild(lab);
+      if (g.desc) { var d = document.createElement("p"); d.className = "chips-desc"; d.textContent = g.desc; wrap.appendChild(d); }
+      var row = document.createElement("div"); row.className = "chips"; row.setAttribute("role", "group"); row.setAttribute("aria-labelledby", lab.id);
+      CASES.filter(function (c) { return c.group === g.id; }).forEach(function (c) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "chip";
+        b.setAttribute("aria-pressed", pc && pc.id === c.id ? "true" : "false");
+        b.appendChild(document.createTextNode("Case " + c.id));
+        if (pDone[c.id]) { var m = document.createElement("span"); m.className = "done-mark"; m.textContent = "✓"; m.setAttribute("aria-hidden", "true"); b.appendChild(m); b.setAttribute("aria-label", "Case " + c.id + ", finished"); }
+        b.addEventListener("click", function () { selectCase(c.id, true); });
+        row.appendChild(b);
+      });
+      wrap.appendChild(row); host.appendChild(wrap);
+    });
+  }
+
+  /* ----- the order of questions in a case -----
+     Discrete cases: 1 median, 2 sure votes, piv whether the indifferent voters are pivotal (when there
+     are any), 2p probability (some cases where they are), 3 moves, 4 regions, 5 equilibrium.
+     Uniform cases: 1 median, 2 vote share, 5 equilibrium. The policy case: 1 median, 2 which position.
+     Stages: 1 q1 open; 2 q2 open; 2.25 piv open; 2.5 q2p open; 3 q3 open; 4 q4 open; 5 q4 answered, B's regions drawn;
+     6 q5 open, the figure moved to its pair; 7 finished. */
+  var OPEN_AT = { "1": 1, "2": 2, "piv": 2.25, "2p": 2.5, "3": 3, "4": 4, "5": 6 };
+  function seqOf(c) {
+    if (c.kind === "uniform") return ["1", "2", "5"];
+    if (c.kind === "policy") return ["1", "2"];
+    var q = ["1", "2"]; if (c.piv) q.push("piv"); if (c.prob) q.push("2p");
+    return q.concat(["3", "4", "5"]);
+  }
+  function nextAfter(c, t) { var q = seqOf(c), i = q.indexOf(t); return i + 1 < q.length ? q[i + 1] : null; }
+  function qnum(c, t) { return seqOf(c).indexOf(t) + 1; }
+
+  /* what the figure and the count show at each stage of a case */
+  function caseScene() {
+    var c = pc, sc, rows, sub;
+    if (c.kind === "uniform") {
+      if (pStage < 6) {
+        sc = { dens: c.d, vs: [], a: c.a, b: c.b, centers: pStage > 1 ? { median: true } : {} };
+        rows = { pos: 1 }; sub = "A at " + num(c.a) + ", B at " + num(c.b) + ".";
+      } else {
+        sc = { dens: c.d, vs: [], a: c.ea, b: c.eb, centers: { median: true }, count: true, ring: pStage > 6 && densEq(c.d, c.ea, c.eb).v === "yes" };
+        rows = true; sub = "A at " + num(c.ea) + ", B at " + num(c.eb) + ".";
+      }
+      return { sc: sc, rows: rows, sub: sub };
+    }
+    if (c.kind === "policy") {
+      var best = policyBest(c);
+      if (pStage < 7) { sc = { vs: c.v, a: null, b: c.pb, centers: pStage > 1 ? { median: true } : null, ranks: pStage > 1, ideal: { A: c.ia } }; rows = {}; sub = "A’s ideal point is " + num(c.ia) + ". B is at " + num(c.pb) + "."; }
+      else { sc = { vs: c.v, a: best, b: c.pb, centers: { median: true }, count: true, ideal: { A: c.ia } }; rows = true; sub = "A announces " + num(best) + ". B is at " + num(c.pb) + "."; }
+      return { sc: sc, rows: rows, sub: sub };
+    }
+    if (pStage <= 3) {
+      sc = { vs: c.v, a: c.a, b: c.b, centers: pStage > 1 ? { median: true, mean: true, middle: true, mode: true } : null, ranks: pStage > 1, count: pStage > 2, hideResult: pStage === 2.25 || pStage === 2.5 };
+      rows = pStage === 2.25 ? { pos: 1, mid: 1, sa: 1, sb: 1, k: 1 } : pStage === 2.5 ? { pos: 1, mid: 1, sa: 1, sb: 1, k: 1, pv: 1 } : pStage > 2 ? true : { pos: 1 };
+      sub = "A at " + num(c.a) + ", B at " + num(c.b) + ".";
+    } else if (pStage === 4) {
+      sc = { vs: c.v, a: c.ra, b: null, centers: { median: true } };
+      rows = {}; sub = "A at " + num(c.ra) + ". B hasn’t chosen yet.";
+    } else if (pStage === 5) {
+      sc = { vs: c.v, a: c.ra, b: null, centers: { median: true }, regionsFor: c.ra };
+      rows = {}; sub = "A at " + num(c.ra) + ". The marks under the line show B’s result at every position.";
+    } else {
+      sc = { vs: c.v, a: c.ea, b: c.eb, centers: { median: true }, count: true, ring: pStage > 6 && eqVerdict(c.v, c.ea, c.eb).v === "yes" };
+      rows = true; sub = "A at " + num(c.ea) + ", B at " + num(c.eb) + ".";
+    }
+    return { sc: sc, rows: rows, sub: sub };
+  }
+  function renderCaseCards(fresh) {
+    var c = pc, s = caseScene();
+    showCards({ case: true, line: true, count: true });
+    $("caseTitle").textContent = "Case " + c.id;
+    $("caseGroup").textContent = GROUPS.filter(function (g) { return g.id === c.group; })[0].label;
+    var voters = c.kind === "uniform" ? "Many voters, spread evenly from " + c.lo + " to " + c.hi + " (a uniform distribution)" : c.v.length + " voters at " + voterList(c.v);
+    var cands = c.kind === "policy" ? "A cares only about policy, and its ideal point is " + num(c.ia) + ". B is at " + num(c.pb) + "." :
+      "Two office-seeking candidates, A and B. The questions move them from one pair of positions to the next.";
+    $("caseBody").innerHTML =
+      "<p class='field'><span class='field-label'>Voters</span><span class='data'>" + voters + "</span></p>" +
+      "<p class='field'><span class='field-label'>Candidates</span>" + cands + "</p>";
+    countDens = s.sc.dens || null; countSkip = baseSkip();
+    if (c.kind === "policy") countSkip.pa = countSkip.pb = 1;
+    drawLine(s.sc, s.sub);
+    renderCount(s.sc.vs, s.sc.a, s.sc.b, s.rows, fresh);
+  }
+
+  function optBtn(container, v, text, cls, pressable) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "opt" + (cls ? " " + cls : ""); b.setAttribute("data-v", v); b.textContent = text;
+    if (pressable) b.setAttribute("aria-pressed", "false");
+    $(container).appendChild(b);
+  }
+  function lockOpts(id, chosen) {
+    var bs = $(id).querySelectorAll(".opt");
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].setAttribute("aria-disabled", "true");
+      var v = bs[i].getAttribute("data-v");
+      if (Array.isArray(chosen) ? chosen.indexOf(v) >= 0 : v === chosen) bs[i].classList.add("chosen");
+      if (bs[i].hasAttribute("aria-pressed")) bs[i].removeAttribute("aria-pressed");
+    }
+  }
+  function note(id, ok, head, text, looks) {
+    var el = $(id); el.innerHTML = "";
+    var d = document.createElement("div"); d.className = "result-note " + (ok ? "ok" : "no");
+    var h = document.createElement("span"); h.className = "head"; h.textContent = (ok ? "✓ " : "✕ ") + head + " ";
+    d.appendChild(h); d.appendChild(document.createTextNode(text));
+    if (looks) { var lk = document.createElement("div"); lk.className = "looks"; d.appendChild(lk); lookButtons(lk, looks); }
+    el.appendChild(d);
+  }
+
+  var EQ_OPTS = [
+    { v: "yes", t: "Yes" },
+    { v: "A", t: "No. A can do better by moving." },
+    { v: "B", t: "No. B can do better by moving." },
+    { v: "both", t: "No. Each candidate could do better by moving." }
+  ];
+  function correct3(c) {
+    var base = chanceA(c.v, c.a, c.b);
+    return c.mv.filter(function (x) { return cmp(chanceA(c.v, x, c.b), base) > 0; }).map(function (x) { return String(x); });
+  }
+  /* the policy case: the announced position that leaves the policy put in place closest, on average, to A's ideal point */
+  function policyBest(c) {
+    var best = null, bd = 1e9;
+    c.ch.forEach(function (x) { var dd = expDist(c.v, x, c.pb, c.ia); if (dd < bd - 1e-9) { bd = dd; best = x; } });
+    return best;
+  }
+  function policyLine(c, x) {
+    var f = chanceA(c.v, x, c.pb), d = expDist(c.v, x, c.pb, c.ia);
+    if (f.n === f.d) return "At " + num(x) + ", A wins and policy is " + num(x) + ", " + dtext(d) + " from its ideal point.";
+    if (f.n === 0) return "At " + num(x) + ", A loses and policy is " + num(c.pb) + ", " + dtext(d) + " from its ideal point.";
+    return "At " + num(x) + ", coin flips decide, so policy is " + num(x) + " or " + num(c.pb) + ", on average " + dtext(d) + " from its ideal point.";
+  }
+  function pivAnswer(c) { var q = pivInfo(c.v, c.a, c.b); return q.pivotal ? "yes" : q.sure; }
+  var PIV_OPTS = [
+    { v: "yes", t: "Yes. Their votes can change who wins." },
+    { v: "A", t: "No. A wins whatever they do." },
+    { v: "B", t: "No. B wins whatever they do." }
+  ];
+  function eqOf(c) { return c.kind === "uniform" ? densEq(c.d, c.ea, c.eb) : eqVerdict(c.v, c.ea, c.eb); }
+
+  function selectCase(id, moveReader) {
+    pc = CASES.filter(function (c) { return c.id === id; })[0];
+    pStage = 1; pFirst = true; sel3 = {};
+    var c = pc, n = c.v.length;
+    ["o1", "o2", "opiv", "o2p", "o3", "o4", "o5", "f1", "f2", "fpiv", "f2p", "f3", "f4", "f5"].forEach(function (x) { $(x).innerHTML = ""; });
+    var N = function (t) { return qnum(c, t) + ". "; };
+    if (c.kind === "uniform") {
+      $("q1").textContent = N("1") + "Voters are spread evenly from " + c.lo + " to " + c.hi + ". Where is the median?";
+      c.opts[1].forEach(function (o, i) { optBtn("o1", String(i), num(o.lo), "num"); });
+      $("q2").textContent = N("2") + "A is at " + num(c.a) + " and B is at " + num(c.b) + ". What share of the vote does A get?";
+      c.opts[2].forEach(function (o, i) { optBtn("o2", String(i), pct(o.x), "num"); });
+    } else if (c.kind === "policy") {
+      $("q1").textContent = N("1") + "Where is the median?";
+      c.opts[1].forEach(function (o, i) { optBtn("o1", String(i), ptText(o.lo, o.hi), "num"); });
+      $("q2").textContent = N("2") + "A cares only about the policy the winner puts in place, and its ideal point is " + num(c.ia) + ". B is at " + num(c.pb) + ". Which of these positions should A announce?";
+      c.ch.forEach(function (x) { optBtn("o2", String(x), num(x), "num"); });
+    } else {
+      $("q1").textContent = N("1") + "Where is the median?" + (n % 2 ? "" : " (There are " + n + " voters.)");
+      c.opts[1].forEach(function (o, i) { optBtn("o1", String(i), ptText(o.lo, o.hi), "num"); });
+      $("q2").textContent = N("2") + "A is at " + num(c.a) + " and B is at " + num(c.b) + ". How many voters are sure to vote for A?";
+      c.opts[2].forEach(function (o, i) { optBtn("o2", String(i), String(o.lo), "num"); });
+      if (c.piv) {
+        var kk0 = split(c.v, c.a, c.b).k;
+        $("qpiv").textContent = N("piv") + (kk0 === 1 ? "One voter is exactly at the midpoint, so is indifferent and flips a coin. Is that voter pivotal?" : cap1(cnt(kk0, "voter", "voters")) + " are exactly at the midpoint, so are indifferent and flip coins. Are they pivotal?");
+        PIV_OPTS.forEach(function (o) { optBtn("opiv", o.v, kk0 === 1 ? o.t.replace("Their votes", "Its vote").replace("they do", "it does") : o.t); });
+      }
+      if (c.prob) {
+        $("q2p").textContent = N("2p") + "The indifferent voters are pivotal, so coin flips decide. What is A’s probability of winning?";
+        c.opts["2p"].forEach(function (o, i) { optBtn("o2p", String(i), fstr(o.f), "num"); });
+      }
+      $("q3").textContent = N("3") + "B stays at " + num(c.b) + ". Which of these moves would raise A’s probability of winning above what it gets at " + num(c.a) + "?";
+      c.mv.forEach(function (x) { optBtn("o3", String(x), "A moves to " + num(x), "", true); });
+      optBtn("o3", "none", "None of them", "", true);
+      $("q4").textContent = N("4") + "Now A is at " + num(c.ra) + ". What is B’s winning region, the set of positions where B wins for sure?";
+      c.opts[4].forEach(function (o, i) { optBtn("o4", String(i), o.lo < 0 ? "B has no winning region. The best it can do is a cut point, where coin flips decide." : intervalText(o.lo, o.hi), o.lo < 0 ? "" : "num"); });
+    }
+    $("q5").textContent = N("5") + "A is at " + num(c.ea) + " and B is at " + num(c.eb) + ". Is this pair of positions a Nash equilibrium?";
+    $("o5").innerHTML = ""; EQ_OPTS.forEach(function (o) { optBtn("o5", o.v, o.t); });
+    ["t2", "tpiv", "t2p", "t3", "t4", "t5"].forEach(function (x) { $(x).hidden = true; });
+    $("check3").disabled = false;
+    $("caseDone").hidden = true; $("nextCase").hidden = true;
+    buildPicker(); renderCaseCards();
+    if (moveReader) bring("line");
+  }
+
+  function wrongText(t, v) {
+    var c = pc, n = c.v.length;
+    if (c.kind === "uniform") {
+      if (t === "1") { var o1 = c.opts[1][Number(v)]; return o1.why === "middle" ? "That’s the middle of the policy space. With voters spread evenly from " + c.lo + " to " + c.hi + ", where is the point with half of them on each side?" : "Half of the voters must be on each side of the median. With voters spread evenly, that is halfway between " + c.lo + " and " + c.hi + "."; }
+      if (t === "2") { var o2 = c.opts[2][Number(v)]; return (o2.why === "other" ? "That’s B’s share. " : o2.why === "line" || o2.why === "length10" ? "The voters only run from " + c.lo + " to " + c.hi + ", not across the whole line. " : "") + "Find the midpoint. A’s share is the length of the voters’ range on A’s side of the midpoint, divided by the whole length, " + (c.hi - c.lo) + "."; }
+      return "Check each candidate in turn. Holding the other one still, is there any position that gives it more than half of the vote, or an even chance where it now loses?";
+    }
+    if (c.kind === "policy") {
+      if (t === "1") return "Put the " + n + " voters in order and count to the middle.";
+      var x = Number(v), f = chanceA(c.v, x, c.pb);
+      if (x === c.ia) return "At its own ideal point A loses, so policy ends up at B’s position, " + num(c.pb) + ". Which positions let A win, and which of those is closest to " + num(c.ia) + "?";
+      if (f.n !== f.d) return "At " + num(x) + ", A doesn’t win for sure. Which positions let A win outright?";
+      return "A wins at " + num(x) + ", but is there a winning position closer to its ideal point, " + num(c.ia) + "?";
+    }
+    if (t === "1") {
+      var o = c.opts[1][Number(v)];
+      if (o.why === "mean") return "That’s about where the mean is. The median depends only on the order of the voters, not how far apart they are. Put the " + n + " voters in order and count to the middle.";
+      if (o.why === "mode") return "That’s the mode, the most common ideal point. The median is the middle voter. Put the " + n + " voters in order and count to the middle.";
+      if (o.why === "middle") return "That’s the middle of the policy space, not the middle voter. Put the " + n + " voters in order and count to the middle.";
+      if (o.why === "distinct") return "Count every voter, including each one where several share an ideal point.";
+      if (n % 2 === 0) return "With " + n + " voters there are two middle voters, the " + ordinal(n / 2) + " and the " + ordinal(n / 2 + 1) + ". What are their ideal points, and what lies between them?";
+      return "With " + n + " voters, the median voter is the " + ordinal((n + 1) / 2) + " in order. Count again, including every voter at a shared ideal point.";
+    }
+    if (t === "2") return "Find the midpoint, halfway between " + num(c.a) + " and " + num(c.b) + ". Voters strictly on A’s side of it are sure to vote for A. A voter exactly at the midpoint flips a coin, so isn’t sure.";
+    if (t === "piv") {
+      var qi = pivInfo(c.v, c.a, c.b), need = Math.floor(n / 2) + 1;
+      if (v === "yes") return "Add up the sure votes. With " + n + " voters a candidate needs " + need + " to win. Does either candidate already have that many without any of the indifferent voters?";
+      if (qi.pivotal) return "Could the indifferent voters’ votes change who wins? Check what happens if they all vote for A, and if they all vote for B.";
+      return v + " has only " + cnt(v === "A" ? qi.sa : qi.sb, "sure vote", "sure votes") + ". Which candidate has a majority from its sure votes alone?";
+    }
+    if (t === "2p") {
+      var op = c.opts["2p"][Number(v)], sp = split(c.v, c.a, c.b);
+      var start = op.why === "even" ? "Coin flips decide, but the chances are even only when each candidate needs the same number of them. " :
+        op.why === "other" ? "That’s B’s probability. " : op.why === "exact" ? "That counts only the ways A gets exactly what it needs. A also wins if it gets more. " :
+        op.why === "nosure" ? "Don’t forget the sure votes. " : "";
+      return start + "A is sure of " + sp.sa + " and B of " + sp.sb + ". How many of the " + sp.k + " indifferent voters does A need, and in how many of the equally likely ways does it get at least that many?";
+    }
+    if (t === "3") return "For each move, keep B at " + num(c.b) + ", find the new midpoint and count again. A is better off only if its probability of winning rises above its current " + fstr(chanceA(c.v, c.a, c.b)) + ". A move that also wins, when A already wins, doesn’t make A better off.";
+    if (t === "4") {
+      var md = median(c.v);
+      return md[0] === md[1]
+        ? "Find A’s mirror image around the median, 2m − " + num(c.ra) + ". B needs the midpoint strictly on its own side of the median voter, with no coin flips."
+        : "With an even number of voters, B wins for sure only when it is sure of more than half of them. Try a position, find the midpoint, and count. Which end of the median interval does B need to get past?";
+    }
+    return "Check each candidate in turn. Holding the other one still, is there any position that raises its probability of winning? Remember that a move onto the other candidate’s position makes every voter indifferent, so each candidate wins with probability 1/2.";
+  }
+  function rightText(t) {
+    var c = pc, n = c.v.length;
+    if (c.kind === "uniform") {
+      if (t === "1") return "Half of the voters are on each side of " + num(u(c.d.median)) + ", halfway between " + c.lo + " and " + c.hi + ". With voters spread evenly, the mean is the same.";
+      if (t === "2") { var sa = densShareA(c.d, c.a, c.b), mid = (c.a + c.b) / 2, aLeft = c.a < c.b, len = aLeft ? mid / U - c.lo : c.hi - mid / U;
+        return "The midpoint is " + num(mid) + ". A gets the voters from " + (aLeft ? c.lo + " to " + num(mid) : num(mid) + " to " + c.hi) + ", a length of " + num(u(len)) + " out of " + (c.hi - c.lo) + ", so A gets " + pct(sa) + ". " + (sa > 0.5 ? "A wins." : sa < 0.5 ? "B wins." : "They tie."); }
+      var e = densEq(c.d, c.ea, c.eb);
+      if (e.v === "yes") return "Both are at the median. Any move gives the other candidate more than half of the vote, so neither can do better.";
+      var tt = [];
+      if (e.dA) tt.push("A could move to " + num(e.A.example) + " and " + (cmp(e.A.best, { n: 1, d: 1 }) === 0 ? "win" : "win with probability 1/2") + ".");
+      if (e.dB) tt.push("B could move to " + num(e.B.example) + " and " + (cmp(e.B.best, { n: 1, d: 1 }) === 0 ? "win" : "win with probability 1/2") + ".");
+      return tt.join(" ");
+    }
+    if (c.kind === "policy") {
+      var md2 = median(c.v)[0];
+      if (t === "1") return "The " + ordinal((n + 1) / 2) + " of " + n + " voters is at " + num(md2) + ".";
+      return c.ch.map(function (x) { return policyLine(c, x); }).join(" ") + " So A should announce " + num(policyBest(c)) + ", the closest of these to its ideal point that still wins.";
+    }
+    var md = median(c.v);
+    if (t === "1") return md[0] === md[1]
+      ? (n % 2 ? "The " + ordinal((n + 1) / 2) + " of " + n + " voters is at " + num(md[0]) + "." : "The two middle voters, the " + ordinal(n / 2) + " and " + ordinal(n / 2 + 1) + ", are both at " + num(md[0]) + ", so the median is that single point.")
+        + " The mean is " + meanText(c.v) + ", the middle of the policy space is 5" + (modes(c.v).length === 1 ? ", and the mode is " + num(modes(c.v)[0]) : "") + ". The numbers on the policy line count the voters in order."
+      : "The two middle voters are at " + num(md[0]) + " and " + num(md[1]) + ", so every position from " + num(md[0]) + " to " + num(md[1]) + " is a median. The mean is " + meanText(c.v) + ".";
+    if (t === "2") {
+      var s = split(c.v, c.a, c.b), f = chanceA(c.v, c.a, c.b);
+      var base = "The midpoint is " + num((c.a + c.b) / 2) + ". A is sure of " + s.sa + " and B of " + s.sb + (s.k ? ", and " + cnt(s.k, "voter is indifferent and flips a coin", "voters are indifferent and flip coins") : "") + ". ";
+      if (c.piv) return base + "The next question asks whether " + (s.k === 1 ? "that voter is" : "they are") + " pivotal.";
+      return base + (f.n === f.d ? (s.k ? "A wins whatever the coin flips do." : "A wins.") : f.n === 0 ? "B wins." : "A’s probability of winning is " + fstr(f) + ".");
+    }
+    if (t === "piv") {
+      var qi = pivInfo(c.v, c.a, c.b), nd = Math.floor(n / 2) + 1, fa0 = chanceA(c.v, c.a, c.b);
+      var head = "A is sure of " + qi.sa + " and B of " + qi.sb + ", and a candidate needs " + nd + " of the " + n + " votes to win. ";
+      if (!qi.pivotal) return head + qi.sure + " already has a majority from its sure votes, so the indifferent voter" + (qi.k === 1 ? " isn’t" : "s aren’t") + " pivotal, and " + qi.sure + " wins for sure. " + (qi.k > 1 ? "They change the vote count, but not who wins." : "");
+      return head + "Neither has a majority from its sure votes alone, so the indifferent voter" + (qi.k === 1 ? " is" : "s are") + " pivotal" + (qi.k > 1 ? " as a group" : "") + "." +
+        (c.prob ? "" : " A wins with probability " + fstr(fa0) + ".");
+    }
+    if (t === "2p") {
+      var sp = split(c.v, c.a, c.b), need = needOf(sp.sa, sp.sb, sp.k), tot = Math.pow(2, sp.k), ways = 0, fa = chanceA(c.v, c.a, c.b);
+      for (var j = need.a; j <= sp.k; j++) ways += comb(sp.k, j);
+      var prod = []; for (var q = 0; q < sp.k; q++) prod.push("2");
+      return "A is sure of " + sp.sa + " and B of " + sp.sb + ", so A needs at least " + need.a + " of the " + sp.k + " indifferent voter" + (sp.k === 1 ? "" : "s") + ". " +
+        (sp.k === 1 ? "That one voter’s coin decides it, so A wins with probability 1/2." :
+        "Of the " + prod.join(" × ") + " = " + tot + " equally likely ways they can vote, " + ways + " give A at least " + need.a + ", so A wins with probability " + fstr(fa) + " and B with " + fstr({ n: fa.d - fa.n, d: fa.d }) + ".");
+    }
+    if (t === "3") {
+      var b3 = chanceA(c.v, c.a, c.b);
+      var parts = c.mv.map(function (x) { return fstr(chanceA(c.v, x, c.b)) + " if it moves to " + num(x); });
+      var last = parts.pop();
+      return "A’s probability of winning is " + fstr(b3) + " now. It would be " + parts.join(", ") + ", and " + last + ".";
+    }
+    if (t === "4") return regionText(c.v, c.ra);
+    var e5 = eqVerdict(c.v, c.ea, c.eb);
+    if (e5.v === "yes") return "Neither candidate can raise its probability of winning, now " + fstr(chanceA(c.v, c.ea, c.eb)) + " for A, by moving on its own." + (md[0] !== md[1] ? " Both are in the median interval." : "");
+    var t5 = [];
+    if (e5.dA) t5.push("A could move to " + num(e5.A.example) + " and raise its probability of winning from " + fstr(chanceA(c.v, c.ea, c.eb)) + " to " + fstr(e5.A.best) + ".");
+    if (e5.dB) t5.push("B could move to " + num(e5.B.example) + " and raise its probability of winning from " + fstr(chanceB(c.v, c.ea, c.eb)) + " to " + fstr(e5.B.best) + ".");
+    return t5.join(" ");
+  }
+
+  function isRight(t, v) {
+    var c = pc;
+    if (c.kind === "policy" && t === "2") return Number(v) === policyBest(c);
+    if (t === "piv") return v === pivAnswer(c);
+    if (t === "1" || t === "2" || t === "2p" || t === "4") return c.opts[t][Number(v)].why === "right";
+    if (t === "5") return v === eqOf(c).v;
+    return false;
+  }
+  function finishCase() {
+    pStage = 7;
+    pStats.done++;
+    if (pFirst) { pStats.clean++; pDone[pc.id] = true; }
+    buildPicker();
+    $("caseDone").innerHTML = "<p>That’s Case " + pc.id + " finished." + (pFirst ? " Every answer was right the first time." : " Finish a case with every answer right the first time to mark it with a check.") + "</p>";
+    $("caseDone").hidden = false; $("nextCase").hidden = false;
+    renderScore();
+  }
+  function advance(t, chosen) {
+    var c = pc, nxt = nextAfter(c, t);
+    lockOpts("o" + t, chosen);
+    var txt = rightText(t);
+    note("f" + t, true, "Right.", txt, t === "4" ? ["line"] : ["line", "count"]);
+    say("Right. " + txt);
+    if (t === "3") $("check3").disabled = true;
+    if (t === "4") {
+      pStage = 5; renderCaseCards();
+      var go = document.createElement("button"); go.type = "button"; go.className = "btn primary"; go.id = "go5";
+      go.textContent = "Go on to question " + qnum(c, "5");
+      var nav = document.createElement("div"); nav.className = "nav"; nav.appendChild(go); $("f4").appendChild(nav);
+      go.addEventListener("click", function () {
+        pStage = 6; nav.remove(); $("t5").hidden = false; renderCaseCards();
+        say("Question " + qnum(c, "5") + ". A is at " + num(pc.ea) + " and B is at " + num(pc.eb) + ".");
+        bring("line");
+      });
+      bring("line");
+      return;
+    }
+    if (!nxt) { finishCase(); renderCaseCards(); bring("line"); return; }
+    pStage = OPEN_AT[nxt];
+    var fresh = t === "2" && c.kind === "discrete" ? (c.piv ? { mid: 1, sa: 1, sb: 1, k: 1 } : { mid: 1, sa: 1, sb: 1, k: 1, pv: 1, res: 1, pa: 1, pb: 1 }) :
+      t === "piv" ? (c.prob ? { pv: 1 } : { pv: 1, res: 1, pa: 1, pb: 1 }) : t === "2p" ? { res: 1, pa: 1, pb: 1 } : null;
+    renderCaseCards(fresh);
+    $("t" + nxt).hidden = false;
+    bring("line");
+  }
+  function answer(t, v) {
+    if (pStage !== OPEN_AT[t]) return;
+    if (!isRight(t, v)) {
+      pFirst = false;
+      var m = wrongText(t, v) + " Try again.";
+      note("f" + t, false, "Not that one.", m);
+      say("Not that one. " + m);
+      return;
+    }
+    advance(t, v);
+  }
+  ["1", "2", "piv", "2p", "4", "5"].forEach(function (t) {
+    $("o" + t).addEventListener("click", function (e) { var b = e.target.closest(".opt"); if (b && b.getAttribute("aria-disabled") !== "true") answer(t, b.getAttribute("data-v")); });
+  });
+  $("o3").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt"); if (!b || b.getAttribute("aria-disabled") === "true" || pStage !== 3) return;
+    var v = b.getAttribute("data-v");
+    if (v === "none") sel3 = sel3.none ? {} : { none: true };
+    else { delete sel3.none; if (sel3[v]) delete sel3[v]; else sel3[v] = true; }
+    var bs = $("o3").querySelectorAll(".opt");
+    for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-pressed", sel3[bs[i].getAttribute("data-v")] ? "true" : "false");
+  });
+  $("check3").addEventListener("click", function () {
+    if (pStage !== 3) return;
+    var chosen = Object.keys(sel3);
+    if (!chosen.length) { note("f3", false, "Nothing selected.", "Select every move that helps, or “None of them.”"); say("Nothing selected."); return; }
+    var right = correct3(pc), want = right.length ? right : ["none"];
+    var ok = chosen.length === want.length && want.every(function (x) { return sel3[x]; });
+    if (!ok) { pFirst = false; var m = wrongText("3") + " Try again."; note("f3", false, "Not quite.", m); say("Not quite. " + m); return; }
+    advance("3", want);
+  });
+  $("nextCase").addEventListener("click", function () {
+    var i = CASES.indexOf(pc);
+    selectCase(CASES[(i + 1) % CASES.length].id, true);
+    $("practiceTitle").focus({ preventScroll: true });
+    say("Case " + pc.id + ".");
+  });
+  function renderScore() {
+    $("score").textContent = pStats.done === 0 ? "No cases finished yet." :
+      pStats.done + (pStats.done === 1 ? " case" : " cases") + " finished, " + pStats.clean + " with every answer right the first time.";
+  }
+
+  /* ================= modes and theme ================= */
+
+  var mode = "guided", TABS = ["guided", "explore", "practice"];
+  function selectMode(m, focusTab) {
+    mode = m;
+    TABS.forEach(function (t) {
+      var tab = $("tab-" + t);
+      tab.setAttribute("aria-selected", t === m ? "true" : "false");
+      tab.tabIndex = t === m ? 0 : -1;
+      $(t + "Panel").hidden = t !== m;
+    });
+    movedAway = false; backBtn.hidden = true;
+    if (m !== "guided") { $("stepCtrl").innerHTML = ""; countDens = null; countSkip = baseSkip(); }
+    if (m === "guided") renderGuided();
+    else if (m === "explore") { buildPresets(); renderExplore(); }
+    else { if (!pc) selectCase("1", false); else { buildPicker(); renderCaseCards(); } renderScore(); }
+    if (focusTab) $("tab-" + m).focus();
+    say(m === "guided" ? "Guided walkthrough, step " + (step + 1) + "." : m === "explore" ? "Explore mode." : "Practice, case " + pc.id + ".");
+  }
+  TABS.forEach(function (t) { $("tab-" + t).addEventListener("click", function () { selectMode(t, false); }); });
+  $("tabs").addEventListener("keydown", function (e) {
+    var i = TABS.indexOf(mode), next = null;
+    if (e.key === "ArrowRight") next = TABS[(i + 1) % 3];
+    else if (e.key === "ArrowLeft") next = TABS[(i + 2) % 3];
+    else if (e.key === "Home") next = TABS[0];
+    else if (e.key === "End") next = TABS[2];
+    if (next) { e.preventDefault(); selectMode(next, true); }
+  });
+
+  var themeBtn = $("themeToggle");
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    themeBtn.textContent = t === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  }
+  applyTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  themeBtn.addEventListener("click", function () {
+    applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+
+  /* test hook for automated checks; harmless in use */
+  window.__mv = { u: u, U: U, chanceA: chanceA, eqVerdict: eqVerdict, regions: regions, winIntervals: winIntervals, median: median,
+                  meanU: meanU, bestMove: bestMove, CASES: CASES, correct3: correct3, split: split, pivAnswer: pivAnswer, STEPS: STEPS, PRESETS: PRESETS,
+                  policyBest: policyBest, densEq: densEq, pivInfo: pivInfo, coinParts: function (vs, a, b) { var keep = ev; ev = vs; var r = coinParts(a, b); ev = keep; return r; }, seqOf: seqOf, densShareA: densShareA, expDist: expDist };
+
+  renderGuided();
+})();
+</script>
+</body>
+</html>
