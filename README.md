@@ -8,7 +8,7 @@ Interactive teaching tools: guided walkthroughs, explore modes and practice prob
 
 | Topic | Tool | Description |
 |---|---|---|
-| Electoral competition | [Two candidates and the median voter](https://mattgolder.github.io/spatial-models-tools/median-voter.html) | Where two office-seeking candidates locate on a policy line: medians, vote counts, indifferent voters, unilateral deviations and the Hotelling–Downs equilibrium. |
+| Electoral competition | [The median voter theorem (electoral version)](https://mattgolder.github.io/spatial-models-tools/median-voter.html) | Where two office-seeking candidates locate on a policy line: medians, vote counts, indifferent voters, unilateral deviations and the Hotelling–Downs equilibrium. |
 
 ## License
 
