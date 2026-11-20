@@ -8,6 +8,7 @@ Interactive teaching tools: guided walkthroughs, explore modes and practice prob
 
 | Topic | Tool | Description |
 |---|---|---|
+| Spatial preferences | [Ideal points, utility and the midpoint rule](https://mattgolder.github.io/spatial-models-tools/ideal-points.html) | One actor's utility on a policy line, single-peaked and symmetric preferences, indifference and preferred-to sets, the midpoint rule and the cutpoint, and the Pareto set. |
 | Electoral competition | [The median voter theorem (electoral version)](https://mattgolder.github.io/spatial-models-tools/median-voter.html) | Where two office-seeking candidates locate on a policy line: medians, vote counts, indifferent voters, unilateral deviations and the Hotelling–Downs equilibrium. |
 
 ## License

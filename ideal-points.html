@@ -1,0 +1,2287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideal points, utility and the midpoint rule</title>
+<style>
+  :root {
+    --bg: #FAFAFA;
+    --panel: #FFFFFF;
+    --border: #D0D0D0;
+    --text: #111111;
+    --text-2: #555555;
+    --hint: #999999;
+    --deemph: #707070;
+    --accent: #0072B2;
+    --on-accent: #FFFFFF;
+    --favorable: #0072B2;
+    --unfavorable: #B33E00;
+    --neutral: #5F5E5A;
+    --gold-ui: #B8860B;
+    --gold-text: #946B09;
+    --on-gold: #111111;
+    --structure-ink: #141414;
+    --structure-line: #8A8A8A;
+    --pA: #009E73;
+    --pB: #CC79A7;
+    --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --data-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  html[data-theme="dark"] {
+    --bg: #1A1A1A;
+    --panel: #2A2A2A;
+    --border: #3A3A3A;
+    --text: #F2F2F2;
+    --text-2: #B3B3B3;
+    --hint: #7A7A7A;
+    --deemph: #9A9A9A;
+    --accent: #7FC7EE;
+    --on-accent: #0A1E28;
+    --favorable: #7FC7EE;
+    --unfavorable: #F08A4B;
+    --neutral: #A8A6A0;
+    --gold-ui: #E0B23D;
+    --gold-text: #E0B23D;
+    --on-gold: #141414;
+    --structure-ink: #E8E8E8;
+    --structure-line: #7E7E7E;
+    --pA: #3FCFA0;
+    --pB: #E29FC4;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body-font);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  header { margin-bottom: 24px; }
+  h1 { font-size: 1.65rem; font-weight: 600; margin: 0 0 8px 0; line-height: 1.25; }
+  .standfirst { margin: 0 0 8px 0; color: var(--text-2); max-width: 70ch; }
+
+  .topbar {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    align-items: flex-end; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .group-label { display: block; font-size: 11px; color: var(--text-2); margin-bottom: 8px; }
+
+  [role="tablist"] { display: flex; flex-wrap: wrap; gap: 8px; }
+  [role="tab"] {
+    font: inherit; font-size: 0.95rem;
+    padding: 8px 16px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  [role="tab"][aria-selected="true"] {
+    border-color: var(--accent);
+    box-shadow: inset 0 -3px 0 var(--accent);
+    font-weight: 600;
+  }
+
+  .theme-toggle, .look-btn {
+    font: inherit; font-size: 0.85rem;
+    padding: 8px 16px;
+    background: var(--panel); color: var(--accent);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .theme-toggle { color: var(--text); }
+  .looks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+  button:focus-visible, input:focus-visible, h2[tabindex="-1"]:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---------- board ---------- */
+
+  .board {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 809px) { .board { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+    scroll-margin-top: 8px;
+  }
+  .card h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; }
+  .card p { margin: 0 0 8px 0; }
+  .card-sub { font-size: 0.92rem; color: var(--text-2); }
+
+  /* ---------- the figure ---------- */
+
+  svg.fig { display: block; width: 100%; height: auto; }
+  .fig text { font-family: var(--body-font); fill: var(--text); }
+  .fig .axis { stroke: var(--structure-ink); stroke-width: 2; }
+  .fig .axis-ext { stroke: var(--structure-line); stroke-width: 2; stroke-dasharray: 5 4; }
+  .fig .tick { stroke: var(--structure-ink); stroke-width: 1.5; }
+  .fig .tick-ext { stroke: var(--structure-line); stroke-width: 1.5; }
+  .fig .tl { font-family: var(--data-font); font-size: 12px; }
+  .fig .tl-ext { font-family: var(--data-font); font-size: 12px; fill: var(--deemph); }
+  .fig .yaxis { stroke: var(--structure-ink); stroke-width: 1.5; }
+  .fig .ytick { stroke: var(--structure-ink); stroke-width: 1; }
+  .fig .yl { font-family: var(--data-font); font-size: 11px; fill: var(--text-2); }
+  .fig .ytitle { font-size: 12px; fill: var(--text-2); }
+  .fig .axis-title { font-size: 12px; fill: var(--text-2); }
+  .fig .zero { stroke: var(--border); stroke-width: 1; }
+  .fig .curve { fill: none; stroke: var(--structure-ink); stroke-width: 2.5; }
+  .fig .curve-pts { fill: none; stroke: var(--structure-line); stroke-width: 1.5; }
+  .fig .curve-ext { fill: none; stroke: var(--structure-ink); stroke-width: 2.5; stroke-dasharray: 6 4; }
+  .fig .bound { stroke: var(--structure-line); stroke-width: 1.5; stroke-dasharray: 1 3; }
+  .fig .brace { fill: none; stroke: var(--text-2); stroke-width: 1.5; }
+  .fig .brace-l { font-size: 12px; fill: var(--text-2); }
+  .fig .pt { fill: var(--structure-ink); }
+  .fig .mark { fill: var(--structure-ink); }
+  .fig .mark-l { font-family: var(--data-font); font-size: 11px; fill: var(--text-2); stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+  .fig .guide { stroke: var(--structure-line); stroke-width: 1; stroke-dasharray: 3 3; }
+  .fig .level { stroke: var(--deemph); stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .fig .level-l { font-size: 11px; fill: var(--text-2); stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+  .fig .ideal { fill: var(--structure-ink); }
+  .fig .sq { fill: var(--structure-ink); }
+  .fig .prop { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 2; }
+  .fig .indiff { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 2; }
+  .fig .lab { font-family: var(--data-font); font-size: 12px; font-weight: 700; stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+  .fig .set-bar { stroke: var(--text-2); stroke-width: 3; }
+  .fig .set-bar-ext { stroke: var(--text-2); stroke-width: 3; stroke-dasharray: 5 4; }
+  .fig .set-open { fill: var(--panel); stroke: var(--text-2); stroke-width: 2; }
+  .fig .set-closed { fill: var(--text-2); }
+  .fig .set-l { font-size: 12px; fill: var(--text); stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+  .fig .voter { fill: var(--structure-ink); }
+  .fig .vote-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .fig .vote-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+  .fig .vote-0 { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .fig .tracked { fill: none; stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .fig .alt-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .fig .alt-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+  .fig .alt-l { font-family: var(--data-font); font-size: 15px; font-weight: 700; }
+  .fig .cut { stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .fig .move, .legend .move { stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .fig .move-head, .legend .move-head { fill: var(--structure-ink); }
+  .fig .cut-l { font-size: 12px; fill: var(--text-2); }
+  .fig .ghost-cut { stroke: var(--deemph); stroke-width: 1.5; stroke-dasharray: 2 3; }
+  .fig .ghost-cut-l { font-size: 12px; fill: var(--deemph); }
+  .fig .band-A { fill: color-mix(in srgb, var(--pA) 45%, var(--panel)); }
+  .fig .band-B { fill: color-mix(in srgb, var(--pB) 45%, var(--panel)); }
+  .fig .band-edge { fill: none; stroke: var(--structure-ink); stroke-width: 1; }
+  .fig .band-l { font-size: 12px; fill: var(--text); stroke: var(--panel); stroke-width: 4px; paint-order: stroke; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 0 0; font-size: 0.85rem; color: var(--text-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend svg { width: 14px; height: 14px; }
+  .legend .ideal, .legend .sq, .legend .voter, .legend .pt { fill: var(--structure-ink); }
+  .legend .prop, .legend .indiff { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .legend .curve { fill: none; stroke: var(--structure-ink); stroke-width: 2; }
+  .legend .axis-ext { stroke: var(--structure-line); }
+  .legend .level { stroke: var(--deemph); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .legend .set-bar { stroke: var(--text-2); stroke-width: 2.5; }
+  .legend .set-open { fill: var(--panel); stroke: var(--text-2); stroke-width: 1.5; }
+  .legend .set-closed { fill: var(--text-2); }
+  .legend .vote-A, .legend .alt-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .legend .vote-B, .legend .alt-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+  .legend .vote-0 { fill: var(--panel); stroke: var(--structure-ink); stroke-width: 1.5; }
+  .legend .tracked { fill: none; stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .legend .cut { stroke: var(--structure-ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .legend .ghost-cut { stroke: var(--deemph); stroke-width: 1.5; stroke-dasharray: 2 2; }
+  .fig-cap { margin: 8px 0 0 0; font-size: 0.85rem; color: var(--text-2); }
+
+  .result-badge { display: inline-flex; flex-direction: column; border: 1px solid var(--border); border-radius: 4px; padding: 8px 16px; margin: 0 0 8px 0; }
+  .result-badge .rb-val { font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .result-badge svg { width: 14px; height: 14px; }
+  .result-badge .alt-A { fill: var(--pA); stroke: var(--structure-ink); stroke-width: 1; }
+  .result-badge .alt-B { fill: var(--pB); stroke: var(--structure-ink); stroke-width: 1; }
+
+  .slider-box { border: 1px solid var(--border); border-radius: 4px; padding: 8px 16px; margin: 8px 0 0 0; }
+  .slider-read { margin: 8px 0 0 0; font-size: 0.92rem; }
+
+  /* ---------- the worksheet ---------- */
+
+  .table-scroll { overflow-x: auto; }
+  table.ws { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  table.ws caption { text-align: left; font-size: 0.85rem; color: var(--text-2); padding-bottom: 8px; }
+  table.ws th, table.ws td { border-bottom: 1px solid var(--border); padding: 8px; vertical-align: top; text-align: left; }
+  table.ws tbody th { font-weight: 400; width: 46%; }
+  table.ws tbody tr:last-child th, table.ws tbody tr:last-child td { border-bottom: 0; }
+  .rf { display: block; font-family: var(--data-font); font-size: 0.76rem; color: var(--text-2); margin-top: 2px; }
+  .rv { font-family: var(--data-font); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .rv.unknown { color: var(--deemph); font-weight: 400; }
+  td.fresh { box-shadow: inset 3px 0 0 var(--gold-ui); }
+
+  table.nums { border-collapse: collapse; margin: 0 0 8px 0; font-size: 0.85rem; }
+  table.nums caption { text-align: left; font-size: 0.85rem; color: var(--text-2); padding-bottom: 4px; }
+  table.nums th, table.nums td { border: 1px solid var(--border); padding: 4px 8px; text-align: right; font-family: var(--data-font); font-variant-numeric: tabular-nums; }
+  table.nums th[scope="row"] { text-align: left; font-family: var(--body-font); font-weight: 400; color: var(--text-2); }
+
+  .field-label { display: block; font-size: 11px; color: var(--text-2); margin-bottom: 2px; }
+
+  /* ---------- panel ---------- */
+
+  .step-label { font-size: 11px; color: var(--text-2); margin: 0 0 8px 0; }
+  .step-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px 0; }
+  .step-body p { margin: 0 0 8px 0; }
+  .step-body a { color: var(--accent); }
+  .step-body .stmt { border: 1px solid var(--border); border-left: 4px solid var(--structure-line); border-radius: 4px; padding: 8px 16px; margin: 0 0 16px 0; }
+  .step-body .stmt-head { display: block; font-weight: 600; margin-bottom: 8px; }
+  .step-body .stmt p { margin: 0 0 8px 0; }
+  .step-body ul.recap, .step-body ol.recap { margin: 0 0 8px 0; padding-left: 24px; }
+  .step-body ul.recap li, .step-body ol.recap li { margin-bottom: 8px; }
+  .step-body .math { font-family: var(--data-font); font-size: 0.9rem; white-space: nowrap; }
+  .nav { display: flex; gap: 8px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  .dots { display: flex; gap: 0; margin-left: auto; flex-wrap: wrap; }
+  .dot { width: 24px; height: 24px; padding: 0; border: none; background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .dot:hover::before { background: var(--text-2); }
+  .dot.on::before { background: var(--accent); width: 10px; height: 10px; }
+
+  .btn {
+    font: inherit; font-size: 0.95rem; padding: 8px 16px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .btn:disabled { color: var(--deemph); cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .btn.primary:disabled { background: var(--panel); border-color: var(--border); color: var(--deemph); font-weight: 400; }
+
+  .ctrl { margin-bottom: 16px; }
+  .ctrl:last-child { margin-bottom: 0; }
+  .ctrl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  .ctrl-head label { font-size: 0.9rem; font-weight: 600; }
+  .ctrl-val { font-family: var(--data-font); font-variant-numeric: tabular-nums; font-weight: 600; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+  .scale { display: flex; justify-content: space-between; font-family: var(--data-font); font-size: 0.72rem; color: var(--text-2); margin-top: 2px; }
+  .cnote { margin: 8px 0 16px 0; font-size: 0.85rem; color: var(--text-2); }
+  .pick-row { margin: 0 0 16px 0; }
+  .pick-label { display: block; font-size: 0.85rem; color: var(--text-2); margin: 0 0 8px 0; }
+  .case-head { scroll-margin-top: 8px; }
+  /* in practice, on a wide screen, the figure stays in view while the questions scroll */
+  @media (min-width: 810px) {
+    .board.pin-fig > .col { align-self: stretch; }
+    .board.pin-fig #figCard { position: sticky; top: 8px; }
+  }
+  .case-head { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 16px; }
+  .case-title { font-size: 1rem; font-weight: 600; margin: 0 0 2px 0; }
+  .case-group { font-size: 0.85rem; color: var(--text-2); margin: 0 0 8px 0; }
+  .chips-desc { font-size: 0.82rem; color: var(--text-2); margin: 0 0 8px 0; }
+  .chip .done-mark { font-family: var(--data-font); color: var(--favorable); margin-left: 8px; }
+  .task { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+  .task-q { font-weight: 600; margin: 0 0 8px 0; }
+  .opts { display: flex; flex-direction: column; gap: 8px; }
+  .opt {
+    font: inherit; font-size: 0.95rem; text-align: left;
+    padding: 8px 16px; background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .opt.num { font-family: var(--data-font); font-variant-numeric: tabular-nums; }
+  .opt:hover { border-color: var(--accent); }
+  .opt[aria-pressed="true"] { border: 2px solid var(--accent); padding: 7px 15px; font-weight: 600; }
+  .opt[aria-disabled="true"] { cursor: default; color: var(--deemph); }
+  .opt[aria-disabled="true"]:hover { border-color: var(--border); }
+  .opt.chosen[aria-disabled="true"] { color: var(--text); border: 2px solid var(--gold-ui); padding: 7px 15px; }
+  .result-note { margin: 8px 0 0 0; padding: 8px 16px; border-radius: 4px; border: 1px solid var(--border); font-size: 0.92rem; }
+  .result-note.ok { box-shadow: inset 4px 0 0 var(--favorable); }
+  .result-note.no { box-shadow: inset 4px 0 0 var(--unfavorable); }
+  .result-note .head { font-weight: 600; }
+  .result-note.ok .head { color: var(--favorable); }
+  .result-note.no .head { color: var(--unfavorable); }
+  .finished { margin-top: 16px; padding: 8px 16px; border: 2px solid var(--gold-ui); border-radius: 4px; font-size: 0.92rem; }
+  .finished p { margin: 0; }
+  .score { font-family: var(--data-font); font-size: 0.85rem; color: var(--text-2); margin: 16px 0 0 0; }
+  .cgroup { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px; }
+  .cgroup-head { margin: 0 0 8px 0; font-weight: 600; }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0 0; }
+  .chip .x { margin-left: 8px; color: var(--text-2); }
+  #eReadBox { margin: 16px 0 0 0; }
+
+  .chip {
+    font: inherit; font-size: 0.9rem; padding: 8px 16px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+  .chip[aria-pressed="true"] {
+    border-color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); font-weight: 600;
+  }
+  .chip.small { font-size: 0.82rem; padding: 8px 16px; }
+  .chips-group { margin-bottom: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .back-btn {
+    position: fixed; right: 16px; bottom: 16px; z-index: 10;
+    font: inherit; font-size: 0.9rem; font-weight: 600;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent);
+  }
+
+  footer { margin-top: 32px; font-size: 0.82rem; color: var(--text-2); max-width: 70ch; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .btn, [role="tab"], .chip { transition: border-color 120ms ease, background-color 120ms ease; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Ideal points, utility and the midpoint rule</h1>
+    <p class="standfirst">
+      Spatial models place actors and policies in a space, and typically assume that an actor likes a policy less
+      as it moves farther from the actor’s ideal point, in any direction. The guided walkthrough starts with one
+      actor on a policy line. It turns distance into utility, defines single-peaked and symmetric preferences, and
+      finds the indifference set and preferred-to set of a status quo. It then turns to several voters choosing
+      between two alternatives. With symmetric utility, the midpoint between the alternatives splits the voters
+      into those who prefer one alternative and those who prefer the other. This dividing point is the cutpoint,
+      and asymmetric utility moves it away from the midpoint. The walkthrough ends with a discussion of Pareto
+      improvements and the Pareto set.
+      Explore lets you set up your own actor or voters. Practice has cases to work through.
+    </p>
+    <p class="standfirst">
+      Throughout, the policy space runs from 0 to 10, outcomes are certain, and an actor prefers one policy to
+      another only if it gives strictly higher utility. An actor is indifferent between two policies that give
+      them the same utility.
+    </p>
+  </header>
+
+  <div class="topbar">
+    <div>
+      <span class="group-label" id="modeLabel">Mode</span>
+      <div role="tablist" aria-labelledby="modeLabel" id="tabs">
+        <button role="tab" id="tab-guided" aria-selected="true" aria-controls="guidedPanel" type="button">Guided walkthrough</button>
+        <button role="tab" id="tab-explore" aria-selected="false" aria-controls="explorePanel" tabindex="-1" type="button">Explore</button>
+        <button role="tab" id="tab-practice" aria-selected="false" aria-controls="practicePanel" tabindex="-1" type="button">Practice</button>
+      </div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button">Switch to dark mode</button>
+  </div>
+
+  <div class="board">
+
+    <div class="col">
+      <section class="card" id="figCard" aria-labelledby="figTitle">
+        <h2 id="figTitle">The figure</h2>
+        <p class="card-sub" id="figSub"></p>
+        <div class="result-badge" id="resultBadge" hidden><span class="field-label">Vote</span><span class="rb-val" id="resultVal"></span></div>
+        <svg class="fig" id="fig" viewBox="0 0 400 200" aria-hidden="true" focusable="false"></svg>
+        <div id="stepCtrl"></div>
+        <div class="legend" id="legend" aria-hidden="true"></div>
+        <p class="fig-cap" id="figCap"></p>
+      </section>
+
+      <section class="card" id="wsCard" aria-labelledby="wsTitle">
+        <h2 id="wsTitle">The worksheet</h2>
+        <div class="table-scroll">
+          <table class="ws">
+            <caption id="wsCaption">What the figure shows, in numbers.</caption>
+            <tbody id="wsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="card" id="guidedPanel" role="tabpanel" aria-labelledby="tab-guided">
+        <p class="step-label" id="stepLabel"></p>
+        <div aria-live="polite" id="stepLive">
+          <h2 class="step-title" id="stepTitle" tabindex="-1"></h2>
+          <div class="step-body" id="stepBody"></div>
+          <div class="looks" id="stepLook"></div>
+        </div>
+        <div class="nav" id="guidedNav">
+          <button class="btn" type="button" id="prevBtn">Back</button>
+          <button class="btn primary" type="button" id="nextBtn">Next</button>
+          <div class="dots" id="dots" role="group" aria-label="Go to a step"></div>
+        </div>
+      </section>
+
+      <section class="card" id="explorePanel" role="tabpanel" aria-labelledby="tab-explore" hidden>
+        <h2 id="exploreTitle" tabindex="-1">Explore</h2>
+        <p class="cnote">Set up your own actor or voters. The figure and the worksheet follow what you choose.</p>
+        <span class="group-label" id="eViewLabel">Look at</span>
+        <div class="chips" role="group" aria-labelledby="eViewLabel">
+          <button type="button" class="chip small" id="eViewOne" aria-pressed="true">One actor</button>
+          <button type="button" class="chip small" id="eViewMany" aria-pressed="false">Several voters</button>
+        </div>
+        <div aria-live="polite" class="slider-box" id="eReadBox"><p class="slider-read" id="eRead"></p>
+          <p class="cnote" id="eCoinNote" hidden>Week 2 works out how likely each alternative is to win when coins decide. See the tool <a href="https://mattgolder.github.io/spatial-models-tools/median-voter.html" target="_blank" rel="noopener"><em>The median voter theorem (electoral version)</em></a>.</p></div>
+
+        <div id="eOne">
+          <div class="cgroup">
+            <p class="cgroup-head">The actor</p>
+            <span class="group-label" id="eShapeLabel">Utility function</span>
+            <div class="chips" role="group" aria-labelledby="eShapeLabel" id="eShapes"></div>
+            <div id="eAsym" hidden>
+              <div class="ctrl" style="margin-top: 16px;">
+                <div class="ctrl-head"><label for="eAl">Rate to the left of the ideal point, α</label><span class="ctrl-val" id="eAlV"></span></div>
+                <input type="range" id="eAl" min="1" max="3" step="0.5" value="1">
+                <div class="scale"><span>1</span><span>3</span></div>
+              </div>
+              <div class="ctrl">
+                <div class="ctrl-head"><label for="eBe">Rate to the right of the ideal point, β</label><span class="ctrl-val" id="eBeV"></span></div>
+                <input type="range" id="eBe" min="1" max="3" step="0.5" value="2">
+                <div class="scale"><span>1</span><span>3</span></div>
+              </div>
+            </div>
+            <div class="ctrl" style="margin-top: 16px;">
+              <div class="ctrl-head"><label for="eZ">Ideal point, z</label><span class="ctrl-val" id="eZV"></span></div>
+              <input type="range" id="eZ" min="0" max="10" step="0.5" value="7">
+              <div class="scale"><span>0</span><span>10</span></div>
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-head"><label for="eSq">Status quo, SQ</label><span class="ctrl-val" id="eSqV"></span></div>
+              <input type="range" id="eSq" min="0" max="10" step="0.5" value="5">
+              <div class="scale"><span>0</span><span>10</span></div>
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-head"><label for="eP">A proposal, p</label><span class="ctrl-val" id="ePV"></span></div>
+              <input type="range" id="eP" min="0" max="10" step="0.1" value="8.5">
+              <div class="scale"><span>0</span><span>10</span></div>
+            </div>
+          </div>
+          <div class="cgroup">
+            <p class="cgroup-head">Show</p>
+            <div class="chips" role="group" aria-label="Show on the figure">
+              <button type="button" class="chip small" id="eSets" aria-pressed="false">I(SQ) and P(SQ)</button>
+            </div>
+            <p class="cnote">Work out the indifference set and the preferred-to set yourself before you use this. It gives the answers away.</p>
+          </div>
+        </div>
+
+        <div id="eMany" hidden>
+          <div class="cgroup">
+            <p class="cgroup-head">The voters</p>
+            <span class="group-label" id="ePresetLabel">Start from</span>
+            <div class="chips" role="group" aria-labelledby="ePresetLabel" id="ePresets"></div>
+            <p class="cnote">The first two are the walkthrough’s voters, and choosing one also puts A and B where the walkthrough had them.</p>
+            <div class="ctrl" style="margin-top: 16px;">
+              <div class="ctrl-head"><label for="eNew">Ideal point of a new voter</label><span class="ctrl-val" id="eNewV"></span></div>
+              <input type="range" id="eNew" min="0" max="10" step="0.5" value="5">
+              <div class="scale"><span>0</span><span>10</span></div>
+            </div>
+            <div class="row-btns"><button class="btn" type="button" id="eAdd">Add a voter here</button></div>
+            <p class="cnote" id="eVoterNote"></p>
+            <span class="group-label" id="eListLabel">Voters (select one to remove it)</span>
+            <div class="chips" role="group" aria-labelledby="eListLabel" id="eList"></div>
+            <span class="group-label" id="eVshapeLabel" style="margin-top: 16px;">Voters’ utility</span>
+            <div class="chips" role="group" aria-labelledby="eVshapeLabel">
+              <button type="button" class="chip small" id="eSym" aria-pressed="true">Symmetric</button>
+              <button type="button" class="chip small" id="eAsymV" aria-pressed="false">Asymmetric</button>
+            </div>
+            <div id="eVAsym" hidden>
+              <div class="ctrl" style="margin-top: 16px;">
+                <div class="ctrl-head"><label for="eVAl">Rate to the left of the ideal point, α</label><span class="ctrl-val" id="eVAlV"></span></div>
+                <input type="range" id="eVAl" min="1" max="3" step="0.5" value="1">
+                <div class="scale"><span>1</span><span>3</span></div>
+              </div>
+              <div class="ctrl">
+                <div class="ctrl-head"><label for="eVBe">Rate to the right of the ideal point, β</label><span class="ctrl-val" id="eVBeV"></span></div>
+                <input type="range" id="eVBe" min="1" max="3" step="0.5" value="2">
+                <div class="scale"><span>1</span><span>3</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="cgroup">
+            <p class="cgroup-head">The alternatives</p>
+            <div class="ctrl">
+              <div class="ctrl-head"><label for="eA">Alternative A</label><span class="ctrl-val" id="eAV"></span></div>
+              <input type="range" id="eA" min="0" max="10" step="0.1" value="3">
+              <div class="scale"><span>0</span><span>10</span></div>
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-head"><label for="eB">Alternative B</label><span class="ctrl-val" id="eBV"></span></div>
+              <input type="range" id="eB" min="0" max="10" step="0.1" value="8">
+              <div class="scale"><span>0</span><span>10</span></div>
+            </div>
+          </div>
+          <div class="cgroup">
+            <p class="cgroup-head">Show</p>
+            <div class="chips" role="group" aria-label="Show on the figure">
+              <button type="button" class="chip small" id="eCut" aria-pressed="false">The midpoint or cutpoint</button>
+              <button type="button" class="chip small" id="eCount" aria-pressed="false">Count the votes</button>
+              <button type="button" class="chip small" id="ePareto" aria-pressed="false">The Pareto set</button>
+            </div>
+            <p class="cnote">Try a problem yourself before you use these. They give the answers away.</p>
+            <span class="group-label" id="eFocusLabel" style="margin-top: 16px;">Show the utility function of the voter at</span>
+            <div class="chips" role="group" aria-labelledby="eFocusLabel" id="eFocus"></div>
+            <div id="eMove" hidden>
+              <p class="cnote" style="margin-top: 16px;">Move a policy x to a policy y, and see who is better or worse off.</p>
+              <div class="ctrl">
+                <div class="ctrl-head"><label for="eX">The starting policy, x</label><span class="ctrl-val" id="eXV"></span></div>
+                <input type="range" id="eX" min="0" max="10" step="0.5" value="10">
+                <div class="scale"><span>0</span><span>10</span></div>
+              </div>
+              <div class="ctrl">
+                <div class="ctrl-head"><label for="eY">The policy it moves to, y</label><span class="ctrl-val" id="eYV"></span></div>
+                <input type="range" id="eY" min="0" max="10" step="0.5" value="9.5">
+                <div class="scale"><span>0</span><span>10</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="practicePanel" role="tabpanel" aria-labelledby="tab-practice" hidden>
+        <h2 id="practiceTitle" tabindex="-1">Practice</h2>
+        <p class="cnote">Thirteen cases in six groups. Each case asks its questions in order, and the figure fills in as you answer. A case is marked with a check once you answer every question right the first time.</p>
+        <span class="group-label" id="pPickLabel">Choose a case</span>
+        <div id="pPicker"></div>
+        <div class="case-head" id="pCaseHead">
+          <h3 class="case-title" id="pCaseTitle" tabindex="-1"></h3>
+          <p class="case-group" id="pCaseGroup"></p>
+          <p id="pSetup"></p>
+        </div>
+        <div id="pQs"></div>
+        <div class="finished" id="pDoneBox" hidden></div>
+        <div class="nav"><button class="btn primary" type="button" id="pNext" hidden>Next case</button></div>
+        <p class="score" id="pScore"></p>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    Accompanies Sections 5 to 7 of the Week 1 notes (ideal points and spatial preferences, the midpoint rule,
+    and the Pareto set). The actors, voters and alternatives here are new, and none of them appears in the notes
+    or the problem bank. Expected utility and attitudes to risk are the subject of a separate tool.
+  </footer>
+
+  <button class="back-btn" type="button" id="backBtn" hidden>Back to the steps</button>
+  <div class="sr-only" role="status" aria-live="polite" id="live"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var liveEl = document.getElementById("live");
+  function say(msg) { liveEl.textContent = ""; setTimeout(function () { liveEl.textContent = msg; }, 30); }
+  function $(id) { return document.getElementById(id); }
+
+  /* ================= exact arithmetic =================
+     Every position, utility and endpoint is a fraction {n, d}, so comparisons are exact.
+     Slider values arrive in tenths. */
+
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a || 1; }
+  function F(n, d) { if (d === undefined) d = 1; if (d < 0) { n = -n; d = -d; } var g = gcd(n, d); return { n: n / g, d: d / g }; }
+  function fadd(a, b) { return F(a.n * b.d + b.n * a.d, a.d * b.d); }
+  function fsub(a, b) { return F(a.n * b.d - b.n * a.d, a.d * b.d); }
+  function fmul(a, b) { return F(a.n * b.n, a.d * b.d); }
+  function fdiv(a, b) { return F(a.n * b.d, a.d * b.n); }
+  function fcmp(a, b) { var c = a.n * b.d - b.n * a.d; return c > 0 ? 1 : c < 0 ? -1 : 0; }
+  function fneg(a) { return F(-a.n, a.d); }
+  function fabs(a) { return F(Math.abs(a.n), a.d); }
+  function fval(a) { return a.n / a.d; }
+  function dec(v) { return F(Math.round(v * 10), 10); }
+  var ZERO = F(0);
+
+  /* A number as the notes write it: a decimal when it ends within two places, otherwise
+     a fraction with a two-place decimal ("19/3 ≈ 6.33"). Short form for the figure. */
+  var MINUS = "−";
+  /* two decimals of n/d, rounding exact halves up, worked in whole numbers so that 199/40
+     shows 4.98 (in floating point 4.975 is 4.97499…) */
+  function two(n, d) { var h = Math.floor((200 * n + d) / (2 * d)), w = Math.floor(h / 100), c = h % 100; return w + "." + (c < 10 ? "0" : "") + c; }
+  function fmt(a) {
+    var s = a.n < 0 ? MINUS : "", n = Math.abs(a.n), d = a.d;
+    if ((100 * n) % d === 0) return s + String(Math.round(n / d * 100) / 100);
+    return s + n + "/" + d + " ≈ " + s + two(n, d);
+  }
+  function fshort(a) {
+    var s = a.n < 0 ? MINUS : "", n = Math.abs(a.n), d = a.d;
+    if ((100 * n) % d === 0) return s + String(Math.round(n / d * 100) / 100);
+    return s + two(n, d);
+  }
+
+  /* ================= the model ================= */
+
+  /* p: { shape: lin | quad | asym | plateau | tail, z, al, be, h, cap } */
+  function util(p, x) {
+    var d = fsub(x, p.z);
+    if (p.shape === "lin") return fneg(fabs(d));
+    if (p.shape === "quad") return fneg(fmul(d, d));
+    if (p.shape === "asym") return fcmp(x, p.z) < 0 ? fneg(fmul(p.al, fsub(p.z, x))) : fneg(fmul(p.be, fsub(x, p.z)));
+    if (p.shape === "plateau") { var e = fsub(fabs(d), p.h); return fcmp(e, ZERO) > 0 ? fneg(e) : ZERO; }
+    if (p.shape === "tail") { var a = fabs(d); return fcmp(a, p.cap) > 0 ? fneg(p.cap) : fneg(a); }
+    throw new Error("unknown shape");
+  }
+  /* Square-root utility is usually irrational, so utilities go through uval, which gives an exact
+     fraction where there is one and a float for drawing. Comparisons never use the float: every
+     shape here except the asymmetric one ranks policies by distance alone. */
+  function fsqrt(a) {
+    var rn = Math.round(Math.sqrt(a.n)), rd = Math.round(Math.sqrt(a.d));
+    return rn * rn === a.n && rd * rd === a.d ? F(rn, rd) : null;
+  }
+  function uval(p, x) {
+    if (p.shape === "sqrt") { var d = fabs(fsub(x, p.z)), r = fsqrt(d); return { f: r ? fneg(r) : null, v: -Math.sqrt(fval(d)), d: d }; }
+    var f = util(p, x); return { f: f, v: fval(f) };
+  }
+  function ufmt(p, x) { var q = uval(p, x); return q.f ? fmt(q.f) : MINUS + "√" + fmt(q.d) + " ≈ " + MINUS + (-q.v).toFixed(2); }
+  function ushort(p, x) { var q = uval(p, x); return q.f ? fshort(q.f) : MINUS + (-q.v).toFixed(2); }
+  function utilF(p, x) { return uval(p, F(Math.round(x * 1000), 1000)).v; }
+
+  /* The preferred-to set of sq: null when empty, otherwise the open interval {lo, hi}.
+     It is never cut at the ends of the policy space. */
+  function pset(p, sq) {
+    if (fcmp(sq, p.z) === 0) return null;
+    if (p.shape === "asym") { var t = util(p, sq); return { lo: fadd(p.z, fdiv(t, p.al)), hi: fsub(p.z, fdiv(t, p.be)) }; }
+    var r = fabs(fsub(p.z, sq));
+    return { lo: fsub(p.z, r), hi: fadd(p.z, r) };
+  }
+  /* The indifference set of sq: the policies with the same utility as sq. */
+  function indiffSet(p, sq) {
+    var s = pset(p, sq);
+    return s ? [s.lo, s.hi] : [p.z];
+  }
+  function prefers(p, x, y) {
+    if (p.shape === "sqrt") return fcmp(fabs(fsub(y, p.z)), fabs(fsub(x, p.z)));
+    return fcmp(util(p, x), util(p, y));
+  }
+
+  /* Voters choosing between A and B. vp: { shape: lin | asym, al, be }. */
+  function voterP(vp, z) { return { shape: vp.shape, z: z, al: vp.al, be: vp.be }; }
+  function vote(vp, z, A, B) { var c = prefers(voterP(vp, z), A, B); return c > 0 ? "A" : c < 0 ? "B" : "0"; }
+  function tally(vp, vs, A, B) {
+    var t = { A: [], B: [], "0": [] };
+    vs.forEach(function (z) { t[vote(vp, z, A, B)].push(z); });
+    return t;
+  }
+  /* The ideal point at which a voter between the two alternatives is indifferent. */
+  function cutpoint(vp, A, B) {
+    var L = fcmp(A, B) < 0 ? A : B, R = L === A ? B : A;
+    if (vp.shape !== "asym") return fdiv(fadd(L, R), F(2));
+    return fdiv(fadd(fmul(vp.al, L), fmul(vp.be, R)), fadd(vp.al, vp.be));
+  }
+  /* who a move from x to y makes better off, worse off or leaves as well off; distance decides
+     for symmetric voters, utility for asymmetric ones */
+  function moveEffects(vs, x, y, vp) {
+    var r = { better: [], worse: [], same: [] };
+    vs.forEach(function (z) {
+      var c = vp && vp.shape === "asym" ? -prefers(voterP(vp, z), y, x) : fcmp(fabs(fsub(y, z)), fabs(fsub(x, z)));
+      (c < 0 ? r.better : c > 0 ? r.worse : r.same).push(z);
+    });
+    return r;
+  }
+  function paretoSet(vs) {
+    var lo = vs[0], hi = vs[0];
+    vs.forEach(function (z) { if (fcmp(z, lo) < 0) lo = z; if (fcmp(z, hi) > 0) hi = z; });
+    return { lo: lo, hi: hi };
+  }
+
+  /* ================= words ================= */
+
+  function setText(s) { return s ? "(" + fmt(s.lo) + ", " + fmt(s.hi) + ")" : "empty"; }
+  function indText(arr) { return "{" + arr.map(fmt).join(", ") + "}"; }
+  function fnText(p) {
+    var z = fmt(p.z);
+    if (p.shape === "lin") return "Linear, u(x) = −|x − " + z + "|";
+    if (p.shape === "quad") return "Quadratic, u(x) = −|x − " + z + "|²";
+    if (p.shape === "sqrt") return "Square root, u(x) = −√|x − " + z + "|";
+    if (p.shape === "asym") return "Asymmetric, rate α = " + fmt(p.al) + " to the left of " + z + " and β = " + fmt(p.be) + " to the right";
+    if (p.shape === "plateau") return "Flat from " + fmt(fsub(p.z, p.h)) + " to " + fmt(fadd(p.z, p.h)) + ", falling outside";
+    if (p.shape === "tail") return "Falling, but flat to the left of " + fmt(fsub(p.z, p.cap));
+    return "";
+  }
+  function listNums(arr) {
+    var s = arr.map(fmt);
+    if (s.length === 0) return "none";
+    if (s.length === 1) return s[0];
+    return s.slice(0, -1).join(", ") + " and " + s[s.length - 1];
+  }
+  function voterWord(n) { return n === 1 ? "one voter" : ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen"][n] + " voters"; }
+  /* The result under majority rule. Indifferent voters toss coins, so the text says when the coins
+     can change the result, without working out the probabilities (Week 2's tool does that). */
+  function resultOf(t) {
+    var a = t.A.length, b = t.B.length, k = t["0"].length;
+    if (a > b + k || b > a + k) {
+      var w = a > b ? "A" : "B", head = w + " wins, " + Math.max(a, b) + " votes to " + Math.min(a, b);
+      return { text: head + (k ? ". " + (k === 1 ? "The indifferent voter" : "The " + voterWord(k).replace(" voters", "") + " indifferent voters") + " can’t change the result" : ""), winner: w, badge: head };
+    }
+    if (k === 0) return { text: "Tied, " + a + " votes to " + b + ". Majority rule picks no winner, so the model needs a rule for breaking ties", winner: null, badge: "Tied, " + a + " votes to " + b };
+    var lead = a + b === 0 ? "" : a === b ? "Tied, " + a + " votes to " + b + ". " : "A has " + a + (a === 1 ? " vote" : " votes") + " and B has " + b + ". ";
+    var coin = a + b === 0 ? (k === 1 ? "The voter is indifferent and tosses a coin, and the coin decides the result" : "Every voter is indifferent. The " + voterWord(k).replace(" voters", "") + " voters toss coins, and the coins decide the result") :
+      k === 1 ? "The indifferent voter tosses a coin, and the coin decides the result" : "The " + voterWord(k).replace(" voters", "") + " indifferent voters toss coins, and the coins decide the result";
+    return { text: lead + coin, winner: null, badge: k === 1 ? "A coin toss decides" : "Coin tosses decide", coins: true };
+  }
+  function cap(t) { return t.replace(/^./, function (m) { return m.toUpperCase(); }); }
+
+  /* ================= the figure =================
+     scene: { dom: [lo, hi], curve: p | null, pts: [[x, u]...] | null, ymin, marks: [{x, lab}],
+              level, ideal, sq, prop, indiff, pset ("empty" | {lo, hi} | null), voters, vp, A, B,
+              color, cut ("mid" | "cut"), ghostMid, bands, pareto, px, tracked, axisTitle } */
+
+  var X0 = 44, X1 = 384;
+  function niceStep(span) {
+    var c = [0.5, 1, 2, 5, 10, 20, 25, 50];
+    for (var i = 0; i < c.length; i++) if (span / c[i] <= 5) return c[i];
+    return 100;
+  }
+  function anchorAt(x) { return x < 80 ? "start" : x > 350 ? "end" : "middle"; }
+  function tri(x, y, cls) { return "<polygon class='" + cls + "' points='" + x + "," + (y - 8) + " " + (x + 8) + "," + (y + 6) + " " + (x - 8) + "," + (y + 6) + "'></polygon>"; }
+  function diamond(x, y, cls) { return "<polygon class='" + cls + "' points='" + x + "," + (y - 6) + " " + (x + 6) + "," + y + " " + x + "," + (y + 6) + " " + (x - 6) + "," + y + "'></polygon>"; }
+  function keyItem(svg, text) { return "<span><svg viewBox='0 0 14 14'>" + svg + "</svg>" + text + "</span>"; }
+
+  function draw(sc, sub) {
+    var o = [], key = [], lo = sc.dom[0], hi = sc.dom[1];
+    function X(v) { return X0 + (v - lo) * (X1 - X0) / (hi - lo); }
+    function Xf(f) { return X(fval(f)); }
+    var y = 8, hasCurve = !!(sc.curve || sc.pts), outside = lo < 0 || hi > 10, braceY = null;
+    if (outside) { braceY = y + 26; y += 30; }
+    var UT = 0, UB = 0, Yu = null, drops = [];
+
+    /* ----- the utility panel ----- */
+    if (hasCurve) {
+      UT = y + 22; UB = UT + 124;
+      var ym = sc.ymin;
+      Yu = function (u) { return UT + (u / ym) * (UB - UT); };
+      var stp = niceStep(-ym);
+      o.push("<text class='ytitle' x='" + (X0 - 36) + "' y='" + (UT - 12) + "'>Utility</text>");
+      o.push("<line class='zero' x1='" + X0 + "' y1='" + UT + "' x2='" + X1 + "' y2='" + UT + "'></line>");
+      o.push("<line class='yaxis' x1='" + X0 + "' y1='" + (UT - 4) + "' x2='" + X0 + "' y2='" + UB + "'></line>");
+      for (var t = 0; t >= ym - 1e-9; t -= stp) {
+        o.push("<line class='ytick' x1='" + (X0 - 4) + "' y1='" + Yu(t) + "' x2='" + X0 + "' y2='" + Yu(t) + "'></line>");
+        o.push("<text class='yl' x='" + (X0 - 7) + "' y='" + (Yu(t) + 4) + "' text-anchor='end'>" + (t === 0 ? "0" : MINUS + String(-t)) + "</text>");
+      }
+      o.push("<line class='yaxis' x1='" + X0 + "' y1='" + UB + "' x2='" + X1 + "' y2='" + UB + "'></line>");
+      for (var g = Math.ceil(lo); g <= hi; g++) o.push("<line class='ytick' x1='" + X(g) + "' y1='" + UB + "' x2='" + X(g) + "' y2='" + (UB + 4) + "'></line>");
+      o.push("<clipPath id='uclip'><rect x='" + X0 + "' y='" + (UT - 6) + "' width='" + (X1 - X0) + "' height='" + (UB - UT + 6) + "'></rect></clipPath>");
+      if (sc.curve) {
+        var segsC = [[lo, Math.min(0, hi), "curve-ext"], [Math.max(lo, 0), Math.min(hi, 10), "curve"], [Math.max(10, lo), hi, "curve-ext"]];
+        segsC.forEach(function (sg) {
+          if (sg[1] <= sg[0]) return;
+          var pts = [], n = Math.max(2, Math.round(600 * (sg[1] - sg[0]) / (hi - lo)));
+          for (var i = 0; i <= n; i++) { var xx = sg[0] + (sg[1] - sg[0]) * i / n; pts.push(X(xx).toFixed(1) + "," + Yu(Math.max(utilF(sc.curve, xx), ym * 1.05)).toFixed(1)); }
+          o.push("<polyline class='" + sg[2] + "' clip-path='url(#uclip)' points='" + pts.join(" ") + "'></polyline>");
+        });
+        key.push(keyItem("<path class='curve' d='M1,12 L7,3 L13,12'></path>", "The utility function"));
+      }
+      if (sc.pts) {
+        o.push("<polyline class='curve-pts' points='" + sc.pts.map(function (q) { return X(q[0]) + "," + Yu(q[1]); }).join(" ") + "'></polyline>");
+        sc.pts.forEach(function (q) {
+          o.push("<circle class='pt' cx='" + X(q[0]) + "' cy='" + Yu(q[1]) + "' r='5'></circle>");
+          var last = q[0] > 9;
+          o.push("<text class='mark-l' x='" + (X(q[0]) + (last ? -10 : 8)) + "' y='" + (Yu(q[1]) + (last ? 4 : 16)) + "' text-anchor='" + (last ? "end" : "start") + "'>" + (q[1] === 0 ? "0" : MINUS + (-q[1])) + "</text>");
+          drops.push({ x: X(q[0]), y: Yu(q[1]) });
+        });
+        key.push(keyItem("<circle class='pt' cx='7' cy='7' r='4'></circle>", "Utility of an option"));
+      }
+      /* the level line through the status quo's utility, and where it meets the curve */
+      if (sc.level && sc.curve && sc.sq) {
+        var us = uval(sc.curve, sc.sq).v, ly = Yu(us);
+        o.push("<line class='level' x1='" + X0 + "' y1='" + ly + "' x2='" + X1 + "' y2='" + ly + "'></line>");
+        /* the label goes under the level line, midway across the preferred-to set, where the curve is above it */
+        var ps0 = pset(sc.curve, sc.sq), lt = "u(SQ) = " + ushort(sc.curve, sc.sq);
+        /* at the left end, under the line, where the utility function is well below it; otherwise midway across the set */
+        var leftGap = Yu(utilF(sc.curve, lo)) - ly, leftClear = Xf(ps0 ? ps0.lo : sc.sq) - X0 > 70;
+        if (ps0 && leftGap > 24 && leftClear) o.push("<text class='level-l' x='" + (X0 + 6) + "' y='" + (ly + 15) + "' text-anchor='start'>" + lt + "</text>");
+        else if (ps0) o.push("<text class='level-l' x='" + Math.min(Math.max((Xf(ps0.lo) + Xf(ps0.hi)) / 2, X0 + 40), X1 - 40) + "' y='" + (ly + 15 > UB - 4 ? ly - 6 : ly + 15) + "' text-anchor='middle'>" + lt + "</text>");
+        else o.push("<text class='level-l' x='" + (X1 - 2) + "' y='" + (ly - 5) + "' text-anchor='end'>" + lt + "</text>");
+        indiffSet(sc.curve, sc.sq).forEach(function (q) {
+          o.push("<circle class='indiff' cx='" + Xf(q) + "' cy='" + ly + "' r='4.5'></circle>");
+          drops.push({ x: Xf(q), y: ly });
+        });
+        key.push(keyItem("<line class='level' x1='0' y1='7' x2='14' y2='7'></line>", "The status quo’s utility"));
+      }
+      /* marked points on the curve, with guides across to the utility axis and down to the policy line */
+      (sc.marks || []).forEach(function (m) {
+        var px = Xf(m.x), py = Yu(uval(sc.curve, m.x).v);
+        o.push("<line class='guide' x1='" + X0 + "' y1='" + py + "' x2='" + px + "' y2='" + py + "'></line>");
+        o.push("<circle class='mark' cx='" + px + "' cy='" + py + "' r='4'></circle>");
+        /* labels sit on the side of the point away from the curve: below and to the right where
+           the curve rises, above and to the right where it falls, below and to the left near the right edge */
+        var rising = fcmp(m.x, sc.curve.z) < 0, edge = px > 320, lx, lyy, anc;
+        if (rising && px > 90) { lx = px - 8; lyy = py - 8; anc = "end"; }
+        else if (rising) { lx = px + 8; lyy = py + 15; anc = "start"; }
+        else if (!edge) { lx = px + 8; lyy = py - 8; anc = "start"; }
+        else { lx = px - 8; lyy = py + 15; anc = "end"; }
+        if (!m.quiet) o.push("<text class='mark-l' x='" + lx + "' y='" + lyy + "' text-anchor='" + anc + "'>" + (m.lab ? m.lab + " " : "") + ushort(sc.curve, m.x) + "</text>");
+        drops.push({ x: px, y: py });
+      });
+      y = UB + 22;
+    }
+
+    /* ----- the policy line ----- */
+    var rowSet = null;
+    if (sc.pset || sc.pareto || sc.dist) { rowSet = y + 20; y += 32; }
+    var cutRow = null, ghostRow = null;
+    if (sc.cut) { cutRow = y + 10; y += 18; if (sc.ghostMid) { ghostRow = y + 10; y += 18; } }
+    var stacks = {}, keys = [], maxH = 0;
+    (sc.voters || []).forEach(function (z) { var k = fval(z); if (!stacks[k]) { stacks[k] = 0; keys.push(z); } stacks[k]++; maxH = Math.max(maxH, stacks[k]); });
+    var labRow = (sc.ideal || sc.sq || sc.prop || sc.px) ? 20 : 0;
+    if (sc.py !== undefined && sc.py !== null) labRow += 20;
+    var PL = y + maxH * 12 + labRow + 10;
+
+    /* the axis, dashed where it runs past 0 or 10 */
+    var a0 = Math.max(lo, 0), a1 = Math.min(hi, 10);
+    if (lo < 0) o.push("<line class='axis-ext' x1='" + X(lo) + "' y1='" + PL + "' x2='" + X(0) + "' y2='" + PL + "'></line>");
+    if (hi > 10) o.push("<line class='axis-ext' x1='" + X(10) + "' y1='" + PL + "' x2='" + X(hi) + "' y2='" + PL + "'></line>");
+    o.push("<line class='axis' x1='" + X(a0) + "' y1='" + PL + "' x2='" + X(a1) + "' y2='" + PL + "'></line>");
+    /* on a wide line, label every second or fifth tick so the numbers don't collide */
+    var lstep = hi - lo <= 14 ? 1 : hi - lo <= 28 ? 2 : 5;
+    for (var tk = Math.ceil(lo); tk <= hi; tk++) {
+      var ext = tk < 0 || tk > 10;
+      o.push("<line class='" + (ext ? "tick-ext" : "tick") + "' x1='" + X(tk) + "' y1='" + (PL - 5) + "' x2='" + X(tk) + "' y2='" + (PL + 5) + "'></line>");
+      if (tk % lstep === 0) o.push("<text class='" + (ext ? "tl-ext" : "tl") + "' x='" + X(tk) + "' y='" + (PL + 20) + "' text-anchor='middle'>" + (tk < 0 ? MINUS + (-tk) : tk) + "</text>");
+    }
+    if (outside) {
+      key.push(keyItem("<line class='axis-ext' x1='0' y1='7' x2='14' y2='7' style='stroke-width:2;stroke-dasharray:3 2'></line>", "Outside the policy space"));
+      /* a dotted line at each end of the policy space that the figure runs past, through both panels,
+         and a brace over the part outside it, labeled */
+      [[lo < 0, 0, lo], [hi > 10, 10, hi]].forEach(function (e) {
+        if (!e[0]) return;
+        var xb = X(e[1]), xo = X(e[2]), a1 = Math.min(xb, xo), a2 = Math.max(xb, xo), mid = (a1 + a2) / 2, by = braceY;
+        o.push("<line class='bound' x1='" + xb + "' y1='" + (by + 2) + "' x2='" + xb + "' y2='" + (PL + 8) + "'></line>");
+        o.push("<path class='brace' d='M" + a1 + "," + (by + 6) + " Q" + a1 + "," + by + " " + (a1 + 6) + "," + by + " L" + (mid - 5) + "," + by + " Q" + mid + "," + by + " " + mid + "," + (by - 5) + " Q" + mid + "," + by + " " + (mid + 5) + "," + by + " L" + (a2 - 6) + "," + by + " Q" + a2 + "," + by + " " + a2 + "," + (by + 6) + "'></path>");
+        var tx = Math.min(Math.max(mid, X0 + 70), 400 - 72);
+        o.push("<text class='brace-l' x='" + tx + "' y='" + (by - 10) + "' text-anchor='middle'>Outside the policy space</text>");
+      });
+    }
+
+    /* guides from the curve down to the policy line */
+    drops.forEach(function (d) { o.push("<line class='guide' x1='" + d.x + "' y1='" + (d.y + 5) + "' x2='" + d.x + "' y2='" + (PL - 6) + "'></line>"); });
+
+    /* the preferred-to set: a bar with open ends; the Pareto set: a bar with closed ends */
+    function bar(s, closed, label) {
+      var x1 = Xf(s.lo), x2 = Xf(s.hi);
+      var in1 = Math.max(x1, X(0)), in2 = Math.min(x2, X(10));
+      if (x1 < X(0)) o.push("<line class='set-bar-ext' x1='" + x1 + "' y1='" + rowSet + "' x2='" + X(0) + "' y2='" + rowSet + "'></line>");
+      if (x2 > X(10)) o.push("<line class='set-bar-ext' x1='" + X(10) + "' y1='" + rowSet + "' x2='" + x2 + "' y2='" + rowSet + "'></line>");
+      if (in2 > in1) o.push("<line class='set-bar' x1='" + in1 + "' y1='" + rowSet + "' x2='" + in2 + "' y2='" + rowSet + "'></line>");
+      [x1, x2].forEach(function (x) { o.push("<circle class='" + (closed ? "set-closed" : "set-open") + "' cx='" + x + "' cy='" + rowSet + "' r='4.5'></circle>"); });
+      var mid = Math.min(Math.max((x1 + x2) / 2, 100), 330);
+      o.push("<text class='set-l' x='" + mid + "' y='" + (rowSet - 9) + "' text-anchor='middle'>" + label + "</text>");
+    }
+    if (sc.pset === "empty") {
+      o.push("<text class='set-l' x='" + Xf(sc.ideal) + "' y='" + (rowSet - 4) + "' text-anchor='" + anchorAt(Xf(sc.ideal)) + "'>P(SQ) is empty</text>");
+    } else if (sc.pset) {
+      bar(sc.pset, false, "P(SQ) = " + setText(sc.pset));
+      key.push(keyItem("<line class='set-bar' x1='3' y1='7' x2='11' y2='7'></line><circle class='set-open' cx='2.5' cy='7' r='2.5'></circle><circle class='set-open' cx='11.5' cy='7' r='2.5'></circle>", "The preferred-to set (open ends)"));
+    }
+    if (sc.dist) {
+      var d1 = Xf(sc.dist.a), d2 = Xf(sc.dist.b);
+      if (d1 !== d2) {
+        o.push("<line class='set-bar' x1='" + d1 + "' y1='" + rowSet + "' x2='" + d2 + "' y2='" + rowSet + "'></line>");
+        [d1, d2].forEach(function (x) { o.push("<line class='set-bar' x1='" + x + "' y1='" + (rowSet - 6) + "' x2='" + x + "' y2='" + (rowSet + 6) + "'></line>"); });
+      }
+      o.push("<text class='set-l' x='" + Math.min(Math.max((d1 + d2) / 2, 80), 340) + "' y='" + (rowSet - 10) + "' text-anchor='middle'>|x − " + fmt(sc.dist.a) + "| = " + fmt(fabs(fsub(sc.dist.b, sc.dist.a))) + "</text>");
+      key.push(keyItem("<line class='set-bar' x1='1' y1='7' x2='13' y2='7'></line><line class='set-bar' x1='1' y1='3' x2='1' y2='11'></line><line class='set-bar' x1='13' y1='3' x2='13' y2='11'></line>", "The distance from x to the ideal point"));
+    }
+    if (sc.pareto) {
+      var ps = paretoSet(sc.voters);
+      bar(ps, true, "Pareto set [" + fmt(ps.lo) + ", " + fmt(ps.hi) + "]");
+      key.push(keyItem("<line class='set-bar' x1='3' y1='7' x2='11' y2='7'></line><circle class='set-closed' cx='2.5' cy='7' r='2.5'></circle><circle class='set-closed' cx='11.5' cy='7' r='2.5'></circle>", "The Pareto set (closed ends)"));
+    }
+
+    /* the midpoint or cutpoint */
+    var t = null;
+    if (sc.voters && sc.A && sc.B) t = tally(sc.vp, sc.voters, sc.A, sc.B);
+    if (sc.cut) {
+      var cp = cutpoint(sc.vp, sc.A, sc.B), cx = Xf(cp);
+      o.push("<line class='cut' x1='" + cx + "' y1='" + (cutRow + 4) + "' x2='" + cx + "' y2='" + (PL + 8) + "'></line>");
+      var mp0 = cutpoint({ shape: "lin" }, sc.A, sc.B), gx0 = Xf(mp0), split2 = sc.ghostMid && fcmp(cp, mp0) !== 0;
+      var cAnc = split2 ? (cx > gx0 ? "start" : "end") : anchorAt(cx), cOff = split2 ? (cx > gx0 ? 4 : -4) : 0;
+      o.push("<text class='cut-l' x='" + (cx + cOff) + "' y='" + cutRow + "' text-anchor='" + cAnc + "'>" + (sc.cut === "cut" ? "cutpoint " : "midpoint ") + fshort(cp) + "</text>");
+      key.push(keyItem("<line class='cut' x1='7' y1='0' x2='7' y2='14'></line>", sc.cut === "cut" ? "The cutpoint" : "The midpoint"));
+      if (sc.ghostMid) {
+        var mp = cutpoint({ shape: "lin" }, sc.A, sc.B), gx = Xf(mp);
+        o.push("<line class='ghost-cut' x1='" + gx + "' y1='" + (ghostRow + 4) + "' x2='" + gx + "' y2='" + (PL + 8) + "'></line>");
+        o.push("<text class='ghost-cut-l' x='" + (gx + (cx > gx ? -4 : 4)) + "' y='" + ghostRow + "' text-anchor='" + (cx > gx ? "end" : "start") + "'>midpoint " + fshort(mp) + "</text>");
+        key.push(keyItem("<line class='ghost-cut' x1='7' y1='0' x2='7' y2='14'></line>", "Where the midpoint was"));
+      }
+    }
+
+    /* voters, stacked, colored by how they vote once the vote is counted */
+    var anyIndiff = false;
+    keys.forEach(function (z) {
+      var cls = "voter";
+      if (sc.color && t) { var v = vote(sc.vp, z, sc.A, sc.B); cls = "vote-" + v; if (v === "0") anyIndiff = true; }
+      for (var i = 0; i < stacks[fval(z)]; i++) o.push("<circle class='" + cls + "' cx='" + Xf(z) + "' cy='" + (PL - 12 - 12 * i) + "' r='5'></circle>");
+    });
+    if (sc.tracked) o.push("<circle class='tracked' cx='" + Xf(sc.tracked) + "' cy='" + (PL - 12) + "' r='9.5'></circle>");
+    if (sc.voters) {
+      if (sc.color) { key.push(keyItem("<circle class='vote-A' cx='7' cy='7' r='5'></circle>", "A voter who prefers A")); key.push(keyItem("<circle class='vote-B' cx='7' cy='7' r='5'></circle>", "A voter who prefers B")); }
+      else key.push(keyItem("<circle class='voter' cx='7' cy='7' r='5'></circle>", "A voter’s ideal point"));
+      if (anyIndiff) key.push(keyItem("<circle class='vote-0' cx='7' cy='7' r='5'></circle>", "An indifferent voter"));
+      if (sc.tracked) key.push(keyItem("<circle class='tracked' cx='7' cy='7' r='5.5'></circle>", "The voter whose utility is shown"));
+    }
+
+    /* markers on the line, labeled above it; labels that would collide are raised */
+    var labs = [];
+    function onLine(x, html, lab, cls) {
+      o.push(html);
+      var ly = PL - 12 - maxH * 12;
+      labs.forEach(function (q) { if (Math.abs(q.x - x) < 30 && q.y === ly) ly -= 13; });
+      labs.push({ x: x, y: ly });
+      o.push("<text class='lab " + (cls || "") + "' x='" + x + "' y='" + ly + "' text-anchor='middle'>" + lab + "</text>");
+    }
+    if (sc.level && sc.curve && sc.sq) indiffSet(sc.curve, sc.sq).forEach(function (q) { if (fcmp(q, sc.sq) !== 0) o.push("<circle class='indiff' cx='" + Xf(q) + "' cy='" + PL + "' r='4.5'></circle>"); });
+    if (sc.ideal) { onLine(Xf(sc.ideal), "<circle class='ideal' cx='" + Xf(sc.ideal) + "' cy='" + PL + "' r='5.5'></circle>", "z"); key.push(keyItem("<circle class='ideal' cx='7' cy='7' r='5'></circle>", "The ideal point, z")); }
+    if (sc.sq) { var sx = Xf(sc.sq); onLine(sx, "<rect class='sq' x='" + (sx - 5) + "' y='" + (PL - 5) + "' width='10' height='10'></rect>", "SQ"); key.push(keyItem("<rect class='sq' x='2' y='2' width='10' height='10'></rect>", "The status quo, SQ")); }
+    if (sc.level && sc.curve && sc.sq) key.push(keyItem("<circle class='indiff' cx='7' cy='7' r='4.5'></circle>", "The indifference set, I(SQ)"));
+    if (sc.prop) { onLine(Xf(sc.prop), diamond(Xf(sc.prop), PL, "prop"), "p"); key.push(keyItem(diamond(7, 7, "prop"), "A proposal, p")); }
+    if (sc.px) { onLine(Xf(sc.px), diamond(Xf(sc.px), PL, "prop"), "x"); key.push(keyItem(diamond(7, 7, "prop"), sc.py ? "The starting policy, x" : "A policy, x")); }
+    if (sc.py) {
+      var yx = Xf(sc.py), xx0 = Xf(sc.px);
+      onLine(yx, diamond(yx, PL, "prop"), "y");
+      key.push(keyItem(diamond(7, 7, "prop"), "The policy it moves to, y"));
+      if (fcmp(sc.px, sc.py) !== 0) {
+        var ay = PL - 12 - maxH * 12 - 30, dir = yx > xx0 ? 1 : -1, tip = yx - dir * 4;
+        o.push("<line class='move' x1='" + xx0 + "' y1='" + ay + "' x2='" + (tip - dir * 6) + "' y2='" + ay + "'></line>");
+        o.push("<polygon class='move-head' points='" + tip + "," + ay + " " + (tip - dir * 7) + "," + (ay - 4) + " " + (tip - dir * 7) + "," + (ay + 4) + "'></polygon>");
+        key.push(keyItem("<line class='move' x1='1' y1='7' x2='9' y2='7'></line><polygon class='move-head' points='13,7 8,4 8,10'></polygon>", "The move"));
+      }
+    }
+
+    var yb = PL + 28;
+    if (sc.axisTitle) { o.push("<text class='axis-title' x='" + ((X0 + X1) / 2) + "' y='" + (PL + 38) + "' text-anchor='middle'>" + sc.axisTitle + "</text>"); yb = PL + 46; }
+
+    /* the alternatives, below the line */
+    if (sc.A && sc.B) {
+      var CY = PL + 42;
+      [["A", sc.A], ["B", sc.B]].forEach(function (q) {
+        o.push(tri(Xf(q[1]), CY, "alt-" + q[0]));
+        o.push("<text class='alt-l' x='" + Xf(q[1]) + "' y='" + (CY + 25) + "' text-anchor='middle'>" + q[0] + "</text>");
+        key.push(keyItem("<polygon class='alt-" + q[0] + "' points='7,1 13,13 1,13'></polygon>", "Alternative " + q[0]));
+      });
+      yb = CY + 34;
+    }
+    /* which side each alternative gets, once the vote is counted */
+    if (sc.bands && t) {
+      var by = yb + 4, cp2 = Xf(cutpoint(sc.vp, sc.A, sc.B)), Aleft = fcmp(sc.A, sc.B) < 0;
+      var L = Aleft ? "A" : "B", R = Aleft ? "B" : "A";
+      o.push("<rect class='band-" + L + "' x='" + X(0) + "' y='" + by + "' width='" + (cp2 - X(0)) + "' height='12'></rect>");
+      o.push("<rect class='band-" + R + "' x='" + cp2 + "' y='" + by + "' width='" + (X(10) - cp2) + "' height='12'></rect>");
+      o.push("<rect class='band-edge' x='" + X(0) + "' y='" + by + "' width='" + (X(10) - X(0)) + "' height='12'></rect>");
+      o.push("<text class='band-l' x='" + X(0) + "' y='" + (by + 27) + "' text-anchor='start'>" + L + " gets " + t[L].length + "</text>");
+      o.push("<text class='band-l' x='" + X(10) + "' y='" + (by + 27) + "' text-anchor='end'>" + R + " gets " + t[R].length + "</text>");
+      yb = by + 36;
+    }
+
+    $("fig").setAttribute("viewBox", "0 0 400 " + Math.ceil(yb));
+    $("fig").innerHTML = o.join("");
+    $("legend").innerHTML = key.join("");
+    $("figSub").textContent = sub || "";
+    $("figTitle").textContent = hasCurve ? "The utility function and the policy line" : "The policy line";
+
+    var rb = $("resultBadge");
+    if (sc.color && t) {
+      var r = resultOf(t); rb.hidden = false;
+      $("resultVal").innerHTML = (r.winner ? "<svg viewBox='0 0 14 14' aria-hidden='true'><polygon class='alt-" + r.winner + "' points='7,1 13,13 1,13'></polygon></svg>" : "") + r.badge;
+    } else rb.hidden = true;
+    $("figCap").textContent = caption(sc, t);
+  }
+
+  function caption(sc, t) {
+    var c = [];
+    if (sc.curve) c.push("Utility function: " + fnText(sc.curve).replace(/^./, function (m) { return m.toLowerCase(); }) + ".");
+    if (sc.pts) c.push("The utility of each option is marked, " + sc.pts.map(function (q) { return fmt(F(Math.round(q[0] * 10), 10)) + " gets " + (q[1] === 0 ? "0" : MINUS + (-q[1])); }).join(", ") + ".");
+    (sc.marks || []).forEach(function (m) { c.push("Policy " + fmt(m.x) + " has utility " + ufmt(sc.curve, m.x) + "."); });
+    if (sc.ideal) c.push("The ideal point is " + fmt(sc.ideal) + ".");
+    if (sc.sq) c.push("The status quo is " + fmt(sc.sq) + (sc.curve ? ", with utility " + ufmt(sc.curve, sc.sq) : "") + ".");
+    if (sc.level && sc.curve && sc.sq) c.push("Its indifference set is I(SQ) = " + indText(indiffSet(sc.curve, sc.sq)) + ".");
+    if (sc.pset === "empty") c.push("The preferred-to set is empty.");
+    else if (sc.pset) c.push("The preferred-to set is " + setText(sc.pset) + (fcmp(sc.pset.hi, F(10)) > 0 || fcmp(sc.pset.lo, ZERO) < 0 ? ", which runs past the end of the policy space" : "") + ".");
+    if (sc.prop) c.push("A proposal p is at " + fmt(sc.prop) + (sc.curve ? ", with utility " + ufmt(sc.curve, sc.prop) : "") + ".");
+    if (sc.voters) c.push(sc.voters.length + " voters at " + listNums(sc.voters) + ".");
+    if (sc.A && sc.B) c.push("A is at " + fmt(sc.A) + " and B at " + fmt(sc.B) + ".");
+    if (sc.cut) c.push((sc.cut === "cut" ? "The cutpoint is " : "The midpoint is ") + fmt(cutpoint(sc.vp, sc.A, sc.B)) + ".");
+    if (sc.color && t) {
+      var who = function (l) { return l.length ? "the voter" + (l.length > 1 ? "s" : "") + " at " + listNums(l) : "no voter"; };
+      c.push("A is preferred by " + who(t.A) + ", and B by " + who(t.B) + (t["0"].length ? ". " + cap(who(t["0"])) + (t["0"].length > 1 ? " are" : " is") + " indifferent" : "") + ". " + resultOf(t).text + ".");
+    }
+    if (sc.tracked) c.push("The utility function shown is for the voter at " + fmt(sc.tracked) + ".");
+    if (sc.pareto) { var ps = paretoSet(sc.voters); c.push("The Pareto set is [" + fmt(ps.lo) + ", " + fmt(ps.hi) + "]."); }
+    if (sc.px) c.push((sc.py ? "The starting policy x is at " : "A policy x is at ") + fmt(sc.px) + ".");
+    if (sc.py) c.push("The move is to y = " + fmt(sc.py) + ".");
+    if (sc.dist) c.push("Its distance from the ideal point is " + fmt(fabs(fsub(sc.dist.b, sc.dist.a))) + ".");
+    return c.join(" ");
+  }
+
+  /* ================= the worksheet =================
+     Rows are worked out from the step's state. A row that is new, or whose value changed
+     since the step before, gets the gold edge. */
+
+  function actorP(s) { return { shape: s.shape, z: s.z, al: s.al, be: s.be, h: s.h, cap: s.cap }; }
+  function vpOf(s) { return { shape: s.vshape, al: s.al, be: s.be }; }
+
+  var WS = {
+    z: { label: "Ideal point", f: "z", v: function (s) { return fmt(s.z); } },
+    fn: { label: "Utility function", v: function (s) { return fnText(actorP(s)); } },
+    x: { label: "A policy", f: "x", v: function (s) { return fmt(s.x); } },
+    dx: { label: "Its distance from the ideal point", f: "|x − z|", v: function (s) { return fmt(fabs(fsub(s.x, s.z))); } },
+    ux: { label: "Its utility", f: "u(x)", v: function (s) { return ufmt(actorP(s), s.x); } },
+    sp: { label: "Single-peaked?", v: function (s) { return s.pts ? "No" : s.shape === "plateau" || s.shape === "tail" ? "Weakly, not strictly" : "Yes, strictly"; } },
+    rank: { label: "Ranking", v: function (s) { return s.rank; } },
+    sq: { label: "Status quo", f: "SQ", v: function (s) { return fmt(s.sq); } },
+    r: { label: "Distance from the ideal point", f: "r = |z − SQ|", v: function (s) { return fmt(fabs(fsub(s.z, s.sq))); } },
+    usq: { label: "Utility of the status quo", f: "u(SQ)", v: function (s) { return ufmt(actorP(s), s.sq); } },
+    ind: { label: "Indifference set, I(SQ)", f: "policies with utility u(SQ)", v: function (s) { return indText(indiffSet(actorP(s), s.sq)); } },
+    ps: { label: "Preferred-to set", f: "P(SQ), policies with utility above u(SQ)", v: function (s) { return setText(pset(actorP(s), s.sq)); } },
+    p: { label: "A proposal", f: "p", v: function (s) { return fmt(s.prop); } },
+    up: { label: "Utility of the proposal", f: "u(p)", v: function (s) { return ufmt(actorP(s), s.prop); } },
+    pv: { label: "Does the actor prefer p to SQ?", v: function (s) { var c = prefers(actorP(s), s.prop, s.sq); return c > 0 ? "Yes" : c < 0 ? "No, they prefer SQ" : "No, they are indifferent"; } },
+    alts: { label: "Alternatives", v: function (s) { return "A = " + fmt(s.A) + ", B = " + fmt(s.B); } },
+    uA: { label: "Utility of A", f: "u(A)", v: function (s) { return ufmt(actorP(s), s.A); } },
+    uB: { label: "Utility of B", f: "u(B)", v: function (s) { return ufmt(actorP(s), s.B); } },
+    ch: { label: "The actor prefers", v: function (s) { var c = prefers(actorP(s), s.A, s.B); return c > 0 ? "A" : c < 0 ? "B" : "Neither, indifferent"; } },
+    voters: { label: "Voters’ ideal points", v: function (s) { return s.voters.map(fmt).join(", "); } },
+    vshape: { label: "Voters’ utility", v: function (s) { return s.vshape === "asym" ? "Asymmetric, rate α = " + fmt(s.al) + " to the left of the ideal point and β = " + fmt(s.be) + " to the right" : "Symmetric, u(x) = −|x − z|"; } },
+    cut: { label: function (s) { return s.vshape === "asym" ? "Cutpoint" : "Midpoint"; }, f: function (s) { return s.vshape === "asym" ? "(αA + βB) / (α + β)" : "(A + B) / 2"; }, v: function (s) { return fmt(cutpoint(vpOf(s), s.A, s.B)); } },
+    nA: { label: "Voters who prefer A", v: function (s) { return listNums(tally(vpOf(s), s.voters, s.A, s.B).A); } },
+    nB: { label: "Voters who prefer B", v: function (s) { return listNums(tally(vpOf(s), s.voters, s.A, s.B).B); } },
+    n0: { label: "Indifferent voters", v: function (s) { return listNums(tally(vpOf(s), s.voters, s.A, s.B)["0"]); } },
+    res: { label: "Vote", v: function (s) { return resultOf(tally(vpOf(s), s.voters, s.A, s.B)).text; } },
+    fz: { label: "The voter shown", v: function (s) { return "ideal point " + fmt(s.focus); } },
+    fuA: { label: "Their utility from A", f: "u(A)", v: function (s) { return fmt(util(voterP(vpOf(s), s.focus), s.A)); } },
+    fuB: { label: "Their utility from B", f: "u(B)", v: function (s) { return fmt(util(voterP(vpOf(s), s.focus), s.B)); } },
+    fv: { label: "They prefer", v: function (s) { var v = vote(vpOf(s), s.focus, s.A, s.B); return v === "0" ? "Neither, indifferent" : v; } },
+    par: { label: "Pareto set", f: "[leftmost, rightmost ideal point]", v: function (s) { var p = paretoSet(s.voters); return "[" + fmt(p.lo) + ", " + fmt(p.hi) + "]"; } },
+    px: { label: "A policy", f: "x", v: function (s) { return fmt(s.px); } },
+    mx: { label: "Starting policy", f: "x", v: function (s) { return fmt(s.px); } },
+    my: { label: "The policy it moves to", f: "y", v: function (s) { return fmt(s.py); } },
+    mb: { label: "Voters made strictly better off", v: function (s) { return listNums(moveEffects(s.voters, s.px, s.py, vpOf(s)).better); } },
+    mw: { label: "Voters made worse off", v: function (s) { return listNums(moveEffects(s.voters, s.px, s.py, vpOf(s)).worse); } },
+    ms: { label: "Voters exactly as well off", v: function (s) { return listNums(moveEffects(s.voters, s.px, s.py, vpOf(s)).same); } },
+    mp: { label: "Is the move a Pareto improvement?", v: function (s) { var e = moveEffects(s.voters, s.px, s.py, vpOf(s)); return e.worse.length ? "No, someone is worse off" : e.better.length ? "Yes" : "No, nobody is better off"; } },
+    pe: { label: "Pareto efficient?", v: function (s) { var p = paretoSet(s.voters); return fcmp(s.px, p.lo) >= 0 && fcmp(s.px, p.hi) <= 0 ? "Yes" : "No"; } }
+  };
+  var lastWs = {};
+  function renderWs(keys, s, track) {
+    var body = $("wsBody"); body.innerHTML = "";
+    var now = {};
+    keys.forEach(function (k) {
+      var row = WS[k], tr = document.createElement("tr"), th = document.createElement("th");
+      th.scope = "row";
+      th.appendChild(document.createTextNode(typeof row.label === "function" ? row.label(s) : row.label));
+      var f = typeof row.f === "function" ? row.f(s) : row.f;
+      if (f) { var sp = document.createElement("span"); sp.className = "rf"; sp.textContent = f; th.appendChild(sp); }
+      tr.appendChild(th);
+      var td = document.createElement("td"), v = document.createElement("span");
+      v.className = "rv"; v.textContent = row.v(s); now[k] = v.textContent;
+      if (track && lastWs[k] !== now[k]) td.className = "fresh";
+      td.appendChild(v); tr.appendChild(td); body.appendChild(tr);
+    });
+    if (track) lastWs = now;
+  }
+
+  /* ================= moving the reader ================= */
+
+  var CARDS = { fig: "figCard", ws: "wsCard", practice: "practicePanel" };
+  var CARD_NAMES = { fig: "the figure", ws: "the worksheet" };
+  var backBtn = $("backBtn");
+  var movedAway = false, autoScrollUntil = 0;
+  function markMoved() { movedAway = true; autoScrollUntil = Date.now() + (reduceMotion ? 100 : 900); }
+  function isEnoughOnScreen(el) {
+    var r = el.getBoundingClientRect(), vh = window.innerHeight;
+    if (r.top >= 0 && r.bottom <= vh) return true;
+    if (r.height > vh && r.top >= 0 && (vh - r.top) >= 0.6 * vh) return true;
+    return false;
+  }
+  function goTo(el) {
+    markMoved();
+    el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
+    setTimeout(updateBack, reduceMotion ? 150 : 950);
+  }
+  function bring(k) {
+    var el = $(CARDS[k]);
+    if (!el || el.hidden || isEnoughOnScreen(el)) return;
+    goTo(el);
+  }
+  function lookButtons(container, keys) {
+    container.innerHTML = "";
+    (keys || []).forEach(function (k) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "look-btn";
+      b.textContent = "Look at " + CARD_NAMES[k];
+      b.addEventListener("click", function () { goTo($(CARDS[k])); });
+      container.appendChild(b);
+    });
+  }
+  function anchorVisible(el) { var r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; }
+  function anchorFor() {
+    if (mode === "guided") return $("guidedNav");
+    if (mode === "practice") return $("pq" + pStep) || $("pDoneBox");
+    return $("eReadBox");
+  }
+  function updateBack() {
+    var a = anchorFor();
+    if (!a || a.hidden) { backBtn.hidden = true; return; }
+    if (anchorVisible(a)) { if (Date.now() >= autoScrollUntil) movedAway = false; backBtn.hidden = true; return; }
+    backBtn.hidden = !movedAway;
+    backBtn.textContent = mode === "guided" ? "Back to the steps" : mode === "explore" ? "Back to the controls" : "Back to the question";
+  }
+  window.addEventListener("scroll", updateBack, { passive: true });
+  window.addEventListener("resize", updateBack);
+  backBtn.addEventListener("click", function () {
+    var a = anchorFor(); if (!a) return;
+    a.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    movedAway = false; backBtn.hidden = true;
+  });
+
+  /* ================= the walkthrough ================= */
+
+  function D(arr) { return arr.map(dec); }
+  var Z = dec(7), ONE = F(1), TWO = F(2);
+  var VOTERS = D([0.5, 2, 3.5, 6, 6.5, 8, 9.5]);
+  var TRAM = [[0, -1], [2.5, -2], [5, -3], [7.5, -4], [10, 0]];
+  var BASE = { z: Z, shape: "lin", al: ONE, be: TWO, h: dec(0.5), cap: F(4) };
+  function st(extra) { var o = {}, k; for (k in BASE) o[k] = BASE[k]; for (k in extra) o[k] = extra[k]; return o; }
+
+  /* The domain of the policy line: 0 to 10, widened to whole numbers when a
+     preferred-to set runs past either end. */
+  function domFor(s, show) {
+    var lo = 0, hi = 10;
+    if (show.pset && s.sq) { var p = pset(actorP(s), s.sq); if (p) { lo = Math.min(lo, Math.floor(fval(p.lo))); hi = Math.max(hi, Math.ceil(fval(p.hi))); } }
+    return [lo, hi];
+  }
+  /* The bottom of the utility axis: a round number below the lowest utility on the line. */
+  function yminFor(p, dom) {
+    var m = 0;
+    for (var i = 0; i <= 200; i++) m = Math.min(m, utilF(p, dom[0] + (dom[1] - dom[0]) * i / 200));
+    var steps = [2, 4, 5, 8, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200];
+    for (var j = 0; j < steps.length; j++) if (steps[j] >= -m * 1.04) return -steps[j];
+    return Math.floor(m * 1.1);
+  }
+  function sceneFor(step, s) {
+    var sh = step.show, sc = { dom: domFor(s, sh) };
+    if (sh.curve) sc.curve = actorP(s);
+    if (sh.focusCurve) sc.curve = voterP(vpOf(s), s.focus);
+    if (sh.pts) { sc.pts = TRAM; sc.ymin = -5; }
+    if (sc.curve) sc.ymin = yminFor(sc.curve, sc.dom);
+    sc.marks = sh.marks ? sh.marks(s).map(function (m) { return m.x ? m : { x: m }; }) : [];
+    if (sh.ideal) sc.ideal = s.z;
+    if (sh.sq) sc.sq = s.sq;
+    if (sh.level) sc.level = true;
+    if (sh.pset) { var p = pset(actorP(s), s.sq); sc.pset = p || "empty"; }
+    if (sh.prop) { sc.prop = s.prop; if (sc.curve) sc.marks.push({ x: s.prop, quiet: true }); }
+    if (sh.voters) { sc.voters = s.voters; sc.vp = vpOf(s); }
+    if (sh.alts) { sc.A = s.A; sc.B = s.B; sc.vp = vpOf(s); }
+    if (sh.color) sc.color = true;
+    if (sh.cut) sc.cut = s.vshape === "asym" ? "cut" : "mid";
+    if (sh.ghostMid && s.vshape === "asym") sc.ghostMid = true;
+    if (sh.bands) sc.bands = true;
+    if (sh.pareto) sc.pareto = true;
+    if (sh.px) sc.px = s.px;
+    if (sh.py) sc.py = s.py;
+    if (sh.dist) { sc.dist = { a: s.z, b: s.x }; sc.px = s.x; }
+    if (sh.focusCurve) sc.tracked = s.focus;
+    if (sh.axisTitle) sc.axisTitle = sh.axisTitle;
+    return sc;
+  }
+
+  /* ----- readouts for the controls under the figure ----- */
+  function readX(s) {
+    var p = actorP(s), d = fabs(fsub(s.x, s.z)), u = ufmt(p, s.x);
+    var how = s.shape === "quad" ? "−|" + fmt(s.x) + " − " + fmt(s.z) + "|² = " + u : s.shape === "sqrt" ? "−√|" + fmt(s.x) + " − " + fmt(s.z) + "| = " + u : "−|" + fmt(s.x) + " − " + fmt(s.z) + "| = " + u;
+    return "Policy " + fmt(s.x) + " is " + fmt(d) + " from the ideal point, so its utility is " + how + ".";
+  }
+  function readShape(s) {
+    var p = actorP(s), v = function (x) { return ushort(p, dec(x)); };
+    var name = s.shape === "quad" ? "Quadratic utility. " : s.shape === "sqrt" ? "Square-root utility. " : "Linear utility. ";
+    return name + "Policies 5.5 and 8.5 get " + v(5.5) + ", 10 gets " + v(10) + " and 1 gets " + v(1) + (s.shape === "sqrt" ? ", rounded to two decimals" : "") + ". The ranking is 7 ≻ 5.5 ∼ 8.5 ≻ 10 ≻ 1.";
+  }
+  function readProp(s) {
+    var p = actorP(s), c = prefers(p, s.prop, s.sq);
+    var head = "p = " + fmt(s.prop) + " is " + fmt(fabs(fsub(s.prop, s.z))) + " from the ideal point, and the status quo is " + fmt(fabs(fsub(s.sq, s.z))) + " away. ";
+    var up = ufmt(p, s.prop), us = ufmt(p, s.sq);
+    return head + (c > 0 ? "p is closer, so its utility, " + up + ", is higher than the status quo’s, " + us + ". The actor prefers p, and p is in the preferred-to set." :
+      c < 0 ? "p is farther, so its utility, " + up + ", is lower than the status quo’s, " + us + ". The actor prefers the status quo, and p is not in the preferred-to set." :
+      "They are the same distance, so they give the same utility, " + up + ". The actor is indifferent. p is in the indifference set, not the preferred-to set.");
+  }
+  function readSq(s) {
+    var p = actorP(s), ps = pset(p, s.sq), ind = indiffSet(p, s.sq);
+    var head = "SQ at " + fmt(s.sq) + ", with utility " + ufmt(p, s.sq) + ". ";
+    if (!ps) return head + "The status quo is the ideal point, so no policy is better. The preferred-to set is empty.";
+    var past = fcmp(ps.hi, F(10)) > 0 ? " It runs past 10, so within the policy space the actor prefers every policy to the right of " + fmt(ps.lo) + "." :
+      fcmp(ps.lo, ZERO) < 0 ? " It runs past 0, so within the policy space the actor prefers every policy to the left of " + fmt(ps.hi) + "." : "";
+    return head + "I(SQ) = " + indText(ind) + " and P(SQ) = " + setText(ps) + "." + past;
+  }
+  function readSet(s) {
+    var p = actorP(s);
+    return (s.shape === "quad" ? "Quadratic utility. " : s.shape === "sqrt" ? "Square-root utility. " : "Linear utility. ") + "u(SQ) = " + ufmt(p, s.sq) + ". The horizontal dashed line meets the utility function at " + listNums(indiffSet(p, s.sq)) + ", so P(SQ) = " + setText(pset(p, s.sq)) + ".";
+  }
+  function readAsymShape(s) {
+    if (s.shape === "asym") return "Asymmetric utility. Policy 5 is 2 to the left of the ideal point and gets −1 × 2 = −2. Policy 8 is 1 to the right of it and gets −2 × 1 = −2.";
+    return "Symmetric linear utility. Policy 5 gets −2 and policy 8 gets −1, because 8 is closer.";
+  }
+  function readFocus(s) {
+    var vp = vpOf(s), z = s.focus, uA = util(voterP(vp, z), s.A), uB = util(voterP(vp, z), s.B), v = vote(vp, z, s.A, s.B);
+    var dA = fabs(fsub(z, s.A)), dB = fabs(fsub(z, s.B));
+    function part(lab, x, d, u) { var side = fcmp(x, z) < 0 ? "to the left of" : fcmp(x, z) > 0 ? "to the right of" : "at"; return lab + " = " + fmt(x) + " is " + (side === "at" ? "at their ideal point" : fmt(d) + " " + side + " their ideal point") + ", so u(" + lab + ") = " + fmt(u) + "."; }
+    var closer = fcmp(dA, dB) < 0 ? "A" : fcmp(dA, dB) > 0 ? "B" : null;
+    return "The voter at " + fmt(z) + ". " + part("A", s.A, dA, uA) + " " + part("B", s.B, dB, uB) + " " +
+      (v === "0" ? "They are indifferent." : "They prefer " + v + (closer && closer !== v ? ", even though " + closer + " is closer." : "."));
+  }
+  function readVshape(s) {
+    var t = tally(vpOf(s), s.voters, s.A, s.B);
+    return (s.vshape === "asym" ? "Asymmetric voters. The cutpoint is " : "Symmetric voters. The midpoint is ") + fmt(cutpoint(vpOf(s), s.A, s.B)) + ". " + resultOf(t).text + ".";
+  }
+  function readMove(s) {
+    var e = moveEffects(s.voters, s.px, s.py, vpOf(s));
+    if (fcmp(s.px, s.py) === 0) return "x and y are both " + fmt(s.px) + ", so nothing moves and nobody is better off.";
+    var t = "A move from " + fmt(s.px) + " to " + fmt(s.py) + ". ";
+    t += e.better.length ? "It makes the voter" + (e.better.length > 1 ? "s" : "") + " at " + listNums(e.better) + " strictly better off" : "It makes nobody better off";
+    t += e.worse.length ? ", and the voter" + (e.worse.length > 1 ? "s" : "") + " at " + listNums(e.worse) + " worse off." : ", and nobody worse off.";
+    if (e.same.length) t += " The voter" + (e.same.length > 1 ? "s" : "") + " at " + listNums(e.same) + (e.same.length > 1 ? " are" : " is") + " exactly as well off.";
+    t += e.worse.length ? " So it is not a Pareto improvement." : e.better.length ? " So it is a Pareto improvement." : "";
+    return t;
+  }
+  function readPx(s) {
+    var ps = paretoSet(s.voters);
+    if (fcmp(s.px, ps.lo) < 0) return "Policy " + fmt(s.px) + " is to the left of every ideal point. Moving it to " + fmt(ps.lo) + " brings every voter closer, so that is a Pareto improvement, and " + fmt(s.px) + " is not Pareto efficient.";
+    if (fcmp(s.px, ps.hi) > 0) return "Policy " + fmt(s.px) + " is to the right of every ideal point. Moving it to " + fmt(ps.hi) + " brings every voter closer, so that is a Pareto improvement, and " + fmt(s.px) + " is not Pareto efficient.";
+    var left = s.voters.filter(function (z) { return fcmp(z, s.px) <= 0; }), right = s.voters.filter(function (z) { return fcmp(z, s.px) >= 0; });
+    return "Policy " + fmt(s.px) + " is in the Pareto set. Moving it right would make the voter" + (left.length > 1 ? "s" : "") + " at " + listNums(left) + " worse off, and moving it left would make the voter" + (right.length > 1 ? "s" : "") + " at " + listNums(right) + " worse off. So no Pareto improvement is possible.";
+  }
+
+  function mathSpan(t) { return "<span class='math'>" + t + "</span>"; }
+  function stmt(head, inner) { return "<div class='stmt' role='note' aria-label='" + head + "'><span class='stmt-head'>" + head + "</span>" + inner + "</div>"; }
+
+  var UTABLE = "<div class='table-scroll'><table class='nums'><caption>Utility for an actor with ideal point 7</caption><tbody>" +
+    "<tr><th scope='row'>Policy x</th><td>1</td><td>5.5</td><td>7</td><td>8.5</td><td>10</td></tr>" +
+    "<tr><th scope='row'>Distance |x − 7|</th><td>6</td><td>1.5</td><td>0</td><td>1.5</td><td>3</td></tr>" +
+    "<tr><th scope='row'>Linear −|x − 7|</th><td>−6</td><td>−1.5</td><td>0</td><td>−1.5</td><td>−3</td></tr>" +
+    "<tr><th scope='row'>Quadratic −|x − 7|²</th><td>−36</td><td>−2.25</td><td>0</td><td>−2.25</td><td>−9</td></tr>" +
+    "<tr><th scope='row'>Square root −√|x − 7|</th><td>−2.45</td><td>−1.22</td><td>0</td><td>−1.22</td><td>−1.73</td></tr></tbody></table></div>" +
+    "<p class='cnote'>Square-root utilities are rounded to two decimals.</p>";
+
+  var SHAPE_CHIPS = [{ v: "lin", t: "Linear" }, { v: "quad", t: "Quadratic" }, { v: "sqrt", t: "Square root" }];
+
+  var STEPS = [
+    { title: "An ideal point on a policy line", look: ["fig"],
+      st: st({}), show: { ideal: true }, ws: ["z"],
+      sub: "One actor, with an ideal point at 7.",
+      body: [
+        "We assume that actors are rational. That is, each actor has complete and transitive preferences over the policy alternatives. A utility function is a way of writing down such a preference ranking. It gives each alternative a number, and alternatives the actor likes more get higher numbers.",
+        "This walkthrough starts with one actor and a policy space that runs from 0 to 10. Every point on the line is a possible policy, not just the whole numbers, so policies such as 6.3 or 8.75 are available too. A policy might be a tax rate or a level of spending. The actor’s ideal point, <em>z</em>, is the policy they like best. Here it is 7.",
+        "The core idea of a spatial model is that distance matters. Actors and alternatives are placed in a space, and how much an actor likes an alternative depends on how far it is from the actor’s ideal point. Here the space is a policy space, but it doesn’t have to be. Later in the course we place parties and voters in spaces defined by identity and by rhetoric."
+      ] },
+    { title: "Distance and utility", look: ["fig", "ws"],
+      st: st({ x: dec(5) }), show: { ideal: true, dist: true },
+      ctrl: [{ type: "slider", key: "x", label: "A policy, x", min: 0, max: 10, step: 0.1 }],
+      read: function (s) { return "Policy " + fmt(s.x) + " is |" + fmt(s.x) + " − 7| = " + fmt(fabs(fsub(s.x, s.z))) + " from the ideal point."; },
+      ws: ["z", "x", "dx"],
+      sub: "Move the policy x with the slider under the figure.",
+      body: [
+        "In a one-dimensional space, the distance between a policy <em>x</em> and an ideal point <em>z</em> is " + mathSpan("|x − z|") + ", the length of the stretch of line between them. The bars take the absolute value of " + mathSpan("x − z") + ", which turns it into a distance that is never negative. Policy 5 gives " + mathSpan("5 − 7 = −2") + " and policy 9 gives " + mathSpan("9 − 7 = 2") + ". The absolute values of −2 and 2 are both 2, so both policies are 2 units away from the actor’s ideal point of 7. Move the policy with the slider under the figure and watch the distance to the ideal point change.",
+        "Spatial models typically assume that distance is a bad thing for the actor. Actors like policies that are closer to their ideal point more than policies that are farther away. The utility functions we examine in the next three steps capture this idea. In general, we write utility as the negative of distance, or of distance raised to some power, and a larger distance gives a lower utility.",
+        "The next three steps look at three common choices for utility functions. Linear utility, " + mathSpan("−|x − z|") + ", falls at a constant rate as distance grows. Quadratic utility, " + mathSpan("−|x − z|²") + ", falls faster and faster with distance. Square-root utility, " + mathSpan("−√|x − z| = −|x − z|<sup>½</sup>") + ", falls more and more slowly with distance. These utility functions take distance and raise it to the power of 1, 2 and ½. They then take the negative of that quantity.",
+        "The highest possible utility is 0, which occurs when the policy is at the actor’s ideal point and distance is 0. Distance can never be negative, and it is 0 only at the ideal point. So the negative of distance, or of any power of it, can never be positive, and it reaches 0 only at the ideal point. Every other policy gets a negative utility."
+      ] },
+    { title: "Linear utility", look: ["fig", "ws"],
+      st: st({ x: dec(5) }), show: { curve: true, ideal: true, marks: function (s) { return [s.x]; } },
+      ctrl: [{ type: "slider", key: "x", label: "A policy, x", min: 0, max: 10, step: 0.1 }], read: readX,
+      ws: ["z", "fn", "x", "dx", "ux"],
+      sub: "Move the policy x with the slider under the figure.",
+      body: [
+        "The simplest choice for modeling the idea that actors have ideal points and prefer policies closer to their ideal point is linear utility. Its most common form gives each policy a utility equal to the negative of its distance from the actor’s ideal point. For our actor, with an ideal point of 7, " + mathSpan("u(x) = −|x − 7|") + ".",
+        "It is called linear utility because utility falls in a straight line as distance grows. Each extra unit of distance costs the same amount of utility, here 1. Putting a positive number in front of the distance gives another linear utility function. With " + mathSpan("−2|x − 7|") + ", for example, each unit of distance costs 2, and policies are ranked exactly as before.",
+        "Move the policy with the slider under the figure. The dashed guides run from the policy up to the graph of the utility function and across to the utility axis. Utility is 0 at the ideal point and negative everywhere else, on either side."
+      ] },
+    { title: "Quadratic utility", look: ["fig", "ws"],
+      st: st({ shape: "quad", x: dec(5) }), show: { curve: true, ideal: true, marks: function (s) { return [s.x]; } },
+      ctrl: [{ type: "chips", key: "shape", label: "Utility function", opts: SHAPE_CHIPS.slice(0, 2) }, { type: "slider", key: "x", label: "A policy, x", min: 0, max: 10, step: 0.1 }], read: readX,
+      ws: ["z", "fn", "x", "dx", "ux"],
+      sub: "Move the policy x with the slider, and switch functions with the buttons, under the figure.",
+      body: [
+        "Another choice is for utility to decline faster and faster as distance grows. One common utility function that captures this idea is quadratic utility, which gives each policy the negative of the square of its distance to the ideal point. For our actor, with an ideal point of 7, " + mathSpan("u(x) = −|x − 7|²") + ". Squaring never gives a negative number, so the absolute value bars aren’t needed, and quadratic utility is usually written " + mathSpan("−(x − 7)²") + ".",
+        "Moving one unit away from the ideal point lowers utility by 1. The same one-unit move away from a policy of 4, which is 3 units from the ideal point, lowers utility by 7 (from −9 to −16). Utility falls faster and faster as distance grows. Raising distance to a power above 2, such as 3, makes utility fall faster still.",
+        "Move the policy with the slider, and switch to linear utility with the buttons to compare. The peak is still 0, at the ideal point."
+      ] },
+    { title: "Square-root utility", look: ["fig", "ws"],
+      st: st({ shape: "sqrt", x: dec(5) }), show: { curve: true, ideal: true, marks: function (s) { return [s.x]; } },
+      ctrl: [{ type: "chips", key: "shape", label: "Utility function", opts: SHAPE_CHIPS }, { type: "slider", key: "x", label: "A policy, x", min: 0, max: 10, step: 0.1 }], read: readX,
+      ws: ["z", "fn", "x", "dx", "ux"],
+      sub: "Move the policy x with the slider, and switch functions with the buttons, under the figure.",
+      body: [
+        "Another choice is for utility to decline more and more slowly as distance grows. One common utility function that captures this idea is square-root utility, which gives each policy the negative of the square root of its distance to the ideal point. For our actor, with an ideal point of 7, " + mathSpan("u(x) = −√|x − 7|") + ", which can also be written " + mathSpan("−|x − 7|<sup>½</sup>") + ". Here the bars are needed. For a policy to the left of 7, " + mathSpan("x − 7") + " is negative, and a negative number has no square root.",
+        "Moving one unit away from the ideal point lowers utility by 1. The same one-unit move away from a policy of 4 lowers utility by only about 0.27 (from about −1.73 to −2). Any power between 0 and 1 gives the same kind of shape.",
+        "Move the policy with the slider under the figure, and switch to the other two functions with the buttons to compare. The peak is still 0, at the ideal point."
+      ] },
+    { title: "Three functions, one ranking", look: ["fig"],
+      st: st({ shape: "sqrt" }), show: { curve: true, ideal: true, marks: function () { return D([1, 5.5, 8.5, 10]); } },
+      ctrl: [{ type: "chips", key: "shape", label: "Utility function", opts: SHAPE_CHIPS }], read: readShape,
+      ws: ["z", "fn"],
+      sub: "Switch among the three utility functions with the buttons under the figure.",
+      body: [
+        "Here are the three functions side by side, for the five policies marked on the figure. Switch among them with the buttons under the figure.",
+        UTABLE,
+        "The utility numbers are very different, but our actor’s ranking of the five policies is the same. Under all three functions, 7 ≻ 5.5 ∼ 8.5 ≻ 10 ≻ 1. In other words, our actor strictly prefers a policy of 7 to a policy of 5.5, and is indifferent between a policy of 5.5 and a policy of 8.5. The actor strictly prefers all three of these policies to a policy of 10, and strictly prefers a policy of 10 to a policy of 1.",
+        "All three utility functions take the same input, distance, so a policy closer to the ideal point always gets the higher number. When an actor chooses among policies whose outcomes are certain, only the ranking matters for predicting the choice. The actor picks the policy it ranks highest, so all three functions predict the same choices. The utility numbers themselves start to matter when outcomes are risky, which a later tool takes up.",
+        "So far, every utility function has given a utility of 0 to the policy at the actor’s ideal point. There’s nothing special about 0. Adding 10 to every number, so that " + mathSpan("u(x) = 10 − |x − 7|") + ", changes the numbers but not the ranking, so the new function predicts the same choices. Putting the peak at 0 is just a convention."
+      ] },
+    { title: "Strict and weak single-peakedness", look: ["fig", "ws"],
+      st: st({}), show: { curve: true, ideal: true },
+      ctrl: [{ type: "chips", key: "shape", label: "Preferences", opts: [{ v: "lin", t: "Strict" }, { v: "plateau", t: "Weak, with a plateau" }, { v: "tail", t: "Weak, with a flat stretch" }] }],
+      read: function (s) {
+        if (s.shape === "plateau") return "Weakly single-peaked. Every policy from 6.5 to 7.5 gives utility 0, so the actor is indifferent among them, and utility falls outside that range.";
+        if (s.shape === "tail") return "Weakly single-peaked. Utility falls until policy reaches 3, and every policy to the left of 3 gives the same utility, −4. So the actor is indifferent between 1 and 2, for example.";
+        return "Strictly single-peaked. Utility falls on both sides of the ideal point. On each side, the closer policy is strictly preferred.";
+      },
+      ws: ["fn", "sp"],
+      sub: "Switch among the three shapes with the buttons under the figure.",
+      body: [
+        "Step 2 noted that spatial models typically assume an actor likes a policy less as it moves farther from their ideal point. An actor who meets this assumption has single-peaked preferences. There are two versions.",
+        stmt("Single-peaked preferences", "<ul class='recap'><li>Preferences over a line are <strong>strictly single-peaked</strong> if the actor has a single ideal point and utility falls as policy moves away from it, in either direction. For any two policies on the same side of the ideal point, the one closer to it is strictly preferred.</li><li>Preferences are <strong>weakly single-peaked</strong> if utility never rises as policy moves away from the ideal point. It can stay flat, so the actor can be indifferent between two policies on the same side.</li></ul>"),
+        "The buttons under the figure show an example of each. The linear utility function is strictly single-peaked, as are all three utility functions from the earlier steps. With a plateau, every policy from 6.5 to 7.5 is equally good. With a flat stretch far away, every policy to the left of 3 is equally bad. Both of these are only weakly single-peaked.",
+        "In this course, “single-peaked” means strictly single-peaked unless we say otherwise."
+      ] },
+    { title: "Preferences that aren’t single-peaked", look: ["fig", "ws"],
+      st: st({ pts: true, rank: "10 ≻ 0 ≻ 2.5 ≻ 5 ≻ 7.5" }), show: { pts: true, axisTitle: "Length of the tram line (km)" },
+      ws: ["rank", "sp"],
+      sub: "A resident at the far end of a planned tram line.",
+      body: [
+        "Not all preferences are single-peaked. Here is an example. A city plans a tram line that could run 0, 2.5, 5, 7.5 or 10 km from downtown. A resident lives at the far end, and would ride the tram every day if it stopped near their home. Only the full line does. Every other length raises their taxes and gives them nothing, and a longer line costs more. They rank the options 10 ≻ 0 ≻ 2.5 ≻ 5 ≻ 7.5.",
+        "The figure gives the options utilities that represent this ranking. The resident has a best option, 10, so they have an ideal point. But moving left from 10, utility first falls and then rises again all the way to 0. Their preferences are not single-peaked.",
+        "Nothing is wrong with these preferences. The ranking is complete and transitive, so the resident is perfectly rational. They just don’t fit the picture in which closer is always better. Assuming single-peakedness rules preferences like this out. In most spatial models, we assume that preferences are single-peaked."
+      ] },
+    { title: "Symmetric and asymmetric preferences", look: ["fig"],
+      st: st({ shape: "asym" }), show: { curve: true, ideal: true, marks: function () { return D([5, 8]); } },
+      ctrl: [{ type: "chips", key: "shape", label: "Utility function", opts: [{ v: "lin", t: "Symmetric" }, { v: "asym", t: "Asymmetric" }] }], read: readAsymShape,
+      ws: ["z", "fn"],
+      sub: "Switch between symmetric and asymmetric utility with the buttons under the figure.",
+      body: [
+        "Linear, quadratic and square-root utility depend only on distance, not direction. Two policies the same distance from the ideal point, one on each side, give the same utility. Preferences like this, and the utility functions that represent them, are <em>symmetric</em>.",
+        "One way to allow asymmetry is to let utility fall at one rate with distance to the left of the ideal point and at another rate to the right of it. With linear utility, utility is " + mathSpan("−α|x − z|") + " for a policy <em>x</em> to the left of the ideal point and " + mathSpan("−β|x − z|") + " for a policy to the right of it. Quadratic or square-root utility can be made asymmetric in the same way.",
+        "In the figure, α = 1 and β = 2, so utility falls twice as fast with distance to the right of the ideal point. The ideal point is 7, so policy 5 is 2 to the left of it and policy 8 is 1 to the right of it, and both give utility −2. A policy 1 unit to the right of the ideal point is as bad as a policy 2 units to the left of it.",
+        "Think of a homeowner who minds a property tax rate higher than their ideal much more than one lower than it. A higher rate comes straight out of their pocket every year, while a lower rate means somewhat thinner public services, and this homeowner cares more about their own budget than about those services.",
+        "Single-peakedness and symmetry are separate assumptions. The tram resident has an ideal point but doesn’t have single-peaked preferences. This homeowner has single-peaked preferences that aren’t symmetric. The three utility functions from the earlier steps make both assumptions."
+      ] },
+    { title: "The indifference set", look: ["fig", "ws"],
+      st: st({ sq: dec(5) }), show: { curve: true, ideal: true, sq: true, level: true },
+      ws: ["z", "fn", "sq", "usq", "r", "ind"],
+      sub: "Linear utility, with a status quo at 5.",
+      body: [
+        "In most situations, some policy is already in place. We call it the <em>status quo</em> policy, or SQ. Here the status quo is 5.",
+        "Given an actor’s ideal point, we can ask which policies give the actor the same utility as the status quo. Any utility function can answer this question. Here we use linear utility for the actor with ideal point 7, " + mathSpan("u(x) = −|x − 7|") + ". The status quo gives the actor a utility of " + mathSpan("u(5) = −|5 − 7| = −2") + ".",
+        "The horizontal dashed line at −2 crosses the utility function at 5, the status quo, and again at 9. Both policies are 2 units from the ideal point of 7, so they give the actor the same utility, and the actor is indifferent between them.",
+        "The <em>indifference set</em> of the status quo, I(SQ), is the set of policies that give the actor the same utility as the status quo. Here I(SQ) = {5, 9}. On the utility function, the two open circles mark the two policies in I(SQ). On the policy line, they are the status quo and the open circle at 9.",
+        "To find the indifference set without a figure, write <em>r</em> for the distance between the ideal point and the status quo, " + mathSpan("r = |z − SQ| = |7 − 5| = 2") + ". The two policies at distance <em>r</em> from the ideal point are <em>z</em> − <em>r</em> and <em>z</em> + <em>r</em>, so " + mathSpan("I(SQ) = {z − r, z + r} = {5, 9}") + ". This works for any symmetric utility function, whether linear, quadratic or square root, because each gives the same utility to two policies the same distance from the ideal point. It doesn’t work for asymmetric utility, as a later step shows."
+      ] },
+    { title: "The preferred-to set", look: ["fig", "ws"],
+      st: st({ sq: dec(5), prop: dec(8.5) }), show: { curve: true, ideal: true, sq: true, level: true, pset: true, prop: true },
+      ctrl: [{ type: "slider", key: "prop", label: "A proposal, p", min: 0, max: 10, step: 0.1 }], read: readProp,
+      ws: ["sq", "usq", "ind", "ps", "p", "up", "pv"],
+      sub: "Move the proposal p with the slider under the figure.",
+      body: [
+        "This step keeps the setup from the previous step. The actor’s ideal point is 7, utility is linear, and the status quo is 5, which gives the actor a utility of −2. The horizontal dashed line labeled u(SQ) marks that utility.",
+        "The <em>preferred-to set</em> of the status quo, P(SQ), is the set of policies the actor strictly prefers to the status quo. They are the policies where the utility function lies above the horizontal dashed line, which are the policies closer to 7 than 5 is.",
+        stmt("Finding the preferred-to set of SQ (one dimension, symmetric preferences)", "<ol class='recap'><li>Measure the distance between the ideal point and the status quo, " + mathSpan("r = |z − SQ|") + ".</li><li>The indifference set is " + mathSpan("I(SQ) = {z − r, z + r}") + ".</li><li>The actor strictly prefers every policy in the open interval " + mathSpan("P(SQ) = (z − r, z + r)") + " to the status quo.</li></ol>"),
+        "Here P(SQ) = (5, 9). It is an open interval, because the actor is indifferent at its ends, 5 and 9, and so doesn’t strictly prefer either of them to the status quo.",
+        "We can understand the preferred-to set better by thinking about a new policy proposal, <em>p</em>, and asking whether the actor prefers it to the status quo. Move the proposal with the slider under the figure. A proposal of 8.5 is 1.5 units from the ideal point, closer than the status quo, so the actor prefers it (its utility is higher). At 9 the actor is indifferent, and at 9.5 they prefer the status quo.",
+        "Any proposal inside the preferred-to set gives the actor a higher utility than the status quo’s −2. Any proposal outside it, other than 5 and 9 themselves, gives a lower utility."
+      ] },
+    { title: "The preferred-to set depends on the position of the SQ", look: ["fig", "ws"],
+      st: st({ sq: dec(5) }), show: { curve: true, ideal: true, sq: true, level: true, pset: true },
+      ctrl: [{ type: "slider", key: "sq", label: "The status quo, SQ", min: 0, max: 10, step: 0.5 }], read: readSq,
+      ws: ["sq", "r", "usq", "ind", "ps"],
+      sub: "Move the status quo with the slider under the figure.",
+      body: [
+        "The ideal point of the actor stays the same here. Move the status quo with the slider under the figure and watch how the preferred-to set changes.",
+        "The closer the status quo is to the ideal point, the smaller the set. At 7 the status quo is the ideal point, so nothing is better and the set is empty. Past 7 the status quo is on the other side, and at 9 the set is (5, 9) again, because 9 is the twin of 5.",
+        "So it makes no sense to ask for an actor’s preferred-to set on its own. It is always the preferred-to set of some reference policy, and here that is the status quo."
+      ] },
+    { title: "When the preferred-to set runs past the end of the policy space", look: ["fig", "ws"],
+      st: st({ sq: dec(2) }), show: { curve: true, ideal: true, sq: true, level: true, pset: true },
+      ws: ["sq", "r", "usq", "ind", "ps"],
+      sub: "The status quo at 2.",
+      body: [
+        "With symmetric utility, the preferred-to set is " + mathSpan("P(SQ) = (z − r, z + r)") + ". Nothing in that formula stops it from reaching beyond the policy space, so the preferred-to set can include “policies” that aren’t actually available. For example, suppose the status quo is at 2 and the actor’s ideal point is at 7. Then " + mathSpan("r = |7 − 2| = 5") + ", and " + mathSpan("P(SQ) = (7 − 5, 7 + 5) = (2, 12)") + ".",
+        "The policy space stops at 10, but we still write the whole preferred-to set, (2, 12). The policies the actor can actually get that beat the status quo are those to the right of 2, up to 10. Writing the whole interval keeps the rule simple and shows how far the actor’s tolerance reaches."
+      ] },
+    { title: "The preferred-to set is the same for every symmetric utility function", look: ["fig", "ws"],
+      st: st({ sq: dec(5), shape: "quad" }), show: { curve: true, ideal: true, sq: true, level: true, pset: true },
+      ctrl: [{ type: "chips", key: "shape", label: "Utility function", opts: SHAPE_CHIPS }], read: readSet,
+      ws: ["fn", "sq", "usq", "ind", "ps"],
+      sub: "Switch among the three utility functions with the buttons under the figure.",
+      body: [
+        "Does the preferred-to set depend on which symmetric utility function we use? Take the same case as before, with the status quo at 5 and the actor’s ideal point at 7. The status quo is 2 units from the ideal point. With quadratic utility it gives the actor a utility of " + mathSpan("−|5 − 7|² = −4") + ". Because the utility function is symmetric, the policy 2 units on the other side of the ideal point, 9, also gives −4.",
+        "So the horizontal dashed line at −4 meets the utility function at 5 and 9, and the preferred-to set is again P(SQ) = (5, 9). Switch among the three functions with the buttons under the figure. With linear utility the status quo gives −2, and with square-root utility it gives " + mathSpan("−√2 ≈ −1.41") + ". The utility numbers change, and so does the height of the dashed line, but the dashed line always meets the utility function at policies 5 and 9.",
+        "Every symmetric utility function gives the same utility to two policies the same distance from the ideal point, and a lower utility to any policy farther away. So changing which symmetric utility function we use changes the utility values, but not which policies the actor prefers to the status quo. The preferred-to set is (z − r, z + r) every time."
+      ] },
+    { title: "Asymmetric preferences and the preferred-to set", look: ["fig", "ws"],
+      st: st({ sq: dec(5), shape: "asym" }), show: { curve: true, ideal: true, sq: true, level: true, pset: true },
+      ctrl: [{ type: "slider", key: "sq", label: "The status quo, SQ", min: 0, max: 10, step: 0.5 }], read: readSq,
+      ws: ["fn", "sq", "usq", "ind", "ps"],
+      sub: "Asymmetric utility, α = 1 and β = 2. Move the status quo with the slider under the figure.",
+      body: [
+        "The preferred-to set is different with an asymmetric utility function. Take the same asymmetric actor as before, with α = 1 to the left of the ideal point and β = 2 to the right of it. Their ideal point is still 7, and the status quo is still 5.",
+        "The status quo is to the left of the ideal point, so its utility is " + mathSpan("−α|5 − 7| = −1 × 2 = −2") + ". To the right of the ideal point, utility falls twice as fast with distance, so it reaches −2 only 1 unit to the right of the ideal point, at 8. That makes 8 the policy on the other side of the ideal point that gives the same utility as the status quo. In other words, I(SQ) = {5, 8}, not {z − r, z + r} = {5, 9}, and P(SQ) = (5, 8).",
+        "The two ends of the indifference set, and of the preferred-to set, are no longer the same distance from the ideal point. The preferred-to set reaches 2 units to the left of the ideal point and only 1 to the right of it. Put differently, it is no longer centered on the ideal point.",
+        "Move the status quo with the slider under the figure. At 8.5 the status quo’s utility is " + mathSpan("−2 × 1.5 = −3") + ", and the preferred-to set is (4, 8.5), reaching 3 units to the left of the ideal point and 1.5 to the right. The preferred-to set always stretches farther on the side where utility falls more slowly."
+      ] },
+    { title: "Comparing two alternatives", look: ["fig", "ws"],
+      st: st({ A: dec(3), B: dec(8) }), show: { curve: true, ideal: true, alts: true, marks: function (s) { return [{ x: s.A, lab: "u(A) =" }, { x: s.B, lab: "u(B) =" }]; } },
+      ws: ["z", "fn", "alts", "uA", "uB", "ch"],
+      sub: "The actor with ideal point 7, and two alternatives, A = 3 and B = 8.",
+      body: [
+        "So far we fixed a reference policy, which we called the status quo, and asked which policies the actor prefers to it. Now suppose the actor faces a choice between two alternative policies. Which of the two do they prefer? Here the two alternatives are A = 3 and B = 8.",
+        "Whatever their utility function, an actor prefers the alternative that gives them the higher utility. Here, as before, the actor’s ideal point is 7 and we use linear utility, " + mathSpan("u(x) = −|x − 7|") + ". B is 1 unit from the ideal point and A is 4 units, so u(B) = −1 and u(A) = −4, and the actor prefers B. With symmetric preferences, the actor simply prefers the alternative that’s closer to their ideal point.",
+        "This is the same comparison as in the earlier steps, with A playing the role of the status quo. The preferred-to set of A is " + mathSpan("P(A) = (7 − 4, 7 + 4) = (3, 11)") + ". B = 8 is inside it, so the actor prefers B to A."
+      ] },
+    { title: "Several voters and the midpoint", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(8), vshape: "lin" }), show: { voters: true, alts: true, cut: true },
+      ws: ["voters", "vshape", "alts", "cut"],
+      sub: "Seven voters choosing between A = 3 and B = 8.",
+      body: [
+        "Now take seven voters with ideal points 0.5, 2, 3.5, 6, 6.5, 8 and 9.5, each with a symmetric linear utility function. The voters are choosing between alternative A = 3 and alternative B = 8. Each votes for the alternative they prefer.",
+        "Each voter prefers the alternative that gives them the higher utility. With symmetric utility functions, as we have here, this is the same as voting for the alternative that’s closer to their ideal point.",
+        "To work out which alternative is closer to which voter, start by finding the <em>midpoint</em> between the two alternatives, halfway between them. " + mathSpan("Midpoint = (A + B) / 2 = (3 + 8) / 2 = 5.5") + ".",
+        "A voter located at the midpoint would be equally distant from each alternative, and so indifferent between them. Voters to the left of the midpoint are closer to A and so prefer A. Voters to the right of the midpoint are closer to B and so prefer B. This is the <em>midpoint rule</em>."
+      ] },
+    { title: "Counting the votes", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(8), vshape: "lin" }), show: { voters: true, alts: true, cut: true, color: true, bands: true },
+      ws: ["voters", "vshape", "alts", "cut", "nA", "nB", "n0", "res"],
+      sub: "Each voter is colored by the alternative they prefer.",
+      body: [
+        "Once the midpoint is identified, we can determine which voters vote for A and which vote for B. That tells us how many votes each alternative gets, and so which alternative wins under whatever voting rule we’ve chosen. Here we use majority rule, so the alternative with more votes wins.",
+        "The voters at 0.5, 2 and 3.5 are to the left of the midpoint, so they vote for A. The voters at 6, 6.5, 8 and 9.5 are to the right, so they vote for B. So A gets three votes and B gets four, and B wins by four votes to three."
+      ] },
+    { title: "A voter at the midpoint", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(9), vshape: "lin" }), show: { voters: true, alts: true, cut: true, color: true, bands: true },
+      ws: ["alts", "cut", "nA", "nB", "n0", "res"],
+      sub: "B moves to 9, so the midpoint is 6.",
+      body: [
+        "Suppose B is at 9 instead. The midpoint is " + mathSpan("(3 + 9) / 2 = 6") + ". One of our seven voters has an ideal point at exactly this position. That voter is 3 units from each alternative, so they are indifferent between them. The figure draws them hollow.",
+        "The voters at 0.5, 2 and 3.5 prefer A, so they are sure to vote for A. The voters at 6.5, 8 and 9.5 prefer B, so they are sure to vote for B. That gives three votes each, and the voter at 6 is indifferent.",
+        "The model needs a rule for indifferent voters before it can say who wins. The usual rule is that an indifferent voter tosses a coin to decide which alternative to vote for. Here the other six voters split three to three, so the coin decides the vote, and each alternative wins with probability 1/2. We look at how this works in more detail in Week 2, and in the tool <a href='https://mattgolder.github.io/spatial-models-tools/median-voter.html' target='_blank' rel='noopener'><em>The median voter theorem (electoral version)</em></a>."
+      ] },
+    { title: "When voters have asymmetric preferences", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(8), vshape: "asym", focus: dec(6) }), show: { focusCurve: true, voters: true, alts: true, marks: function (s) { return [{ x: s.A, lab: "u(A) =" }, { x: s.B, lab: "u(B) =" }]; } },
+      ws: ["vshape", "alts", "fz", "fuA", "fuB", "fv"],
+      sub: "Every voter has α = 1 and β = 2. The utility function shown is for the voter at 6.",
+      body: [
+        "The midpoint rule works when voters have symmetric utility functions. What if they have asymmetric utility functions? Take the same seven voters, choosing between alternative A = 3 and alternative B = 8. Suppose every voter has an asymmetric linear utility function with α = 1 and β = 2, so a policy to the right of a voter’s ideal point hurts twice as much as one the same distance to the left of it.",
+        "The utility function shown here is for the voter whose ideal point is 6. Alternative A is three units to the left of their ideal point, so it gives a utility of " + mathSpan("u(A) = −1|3 − 6| = −3") + ". Alternative B is two units to the right of their ideal point, so it gives a utility of " + mathSpan("u(B) = −2|8 − 6| = −4") + ". So the voter at 6 prefers A to B, even though B is closer to their ideal point."
+      ] },
+    { title: "The cutpoint moves", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(8), vshape: "asym", focus: dec(6) }), show: { focusCurve: true, voters: true, alts: true, cut: true, ghostMid: true, color: true, bands: true, marks: function (s) { return [{ x: s.A, lab: "u(A) =" }, { x: s.B, lab: "u(B) =" }]; } },
+      ctrl: [{ type: "chips", key: "focus", label: "Show the utility of the voter at", opts: VOTERS.map(function (z) { return { v: z, t: fmt(z) }; }) }], read: readFocus,
+      ws: ["vshape", "alts", "cut", "nA", "nB", "n0", "res"],
+      sub: "Choose a voter with the buttons under the figure to see their utility function.",
+      body: [
+        "When every voter has the same utility function, there is a point on the line that splits them. Voters on one side of it prefer A, and voters on the other side prefer B. We call this point the <em>cutpoint</em>. A voter exactly at the cutpoint is indifferent. With symmetric utility, the cutpoint is the midpoint, because each voter simply prefers the closer alternative. With asymmetric utility, distance alone no longer tells us which alternative a voter prefers. Instead, we compare each voter’s utility from the two alternatives directly.",
+        stmt("Finding the cutpoint", "<ol class='recap'>" +
+          "<li><strong>Voters outside the two alternatives.</strong> A voter to the left of both alternatives has both of them to their right, so the nearer one, A, gives the higher utility. In the same way, a voter to the right of both prefers B. Only voters between the alternatives, from 3 to 8, need any work.</li>" +
+          "<li><strong>Write down each utility for a voter between them.</strong> For a voter with ideal point <em>z</em> between 3 and 8, A is to the left at distance " + mathSpan("z − 3") + ", so " + mathSpan("u(A) = −1(z − 3)") + ". B is to the right at distance " + mathSpan("8 − z") + ", so " + mathSpan("u(B) = −2(8 − z)") + ".</li>" +
+          "<li><strong>Set the two utilities equal and solve.</strong> The voter is indifferent when " + mathSpan("z − 3 = 2(8 − z)") + ". That gives " + mathSpan("3z = 19") + ", so the cutpoint is " + mathSpan("z = 19/3 ≈ 6.33") + ".</li>" +
+          "<li><strong>Read off who prefers what.</strong> Voters to the left of 6.33 prefer A, and voters to the right of it prefer B. To check, take a voter on each side. The utility function shown in the figure is for the voter at 6. They get −3 from A and −4 from B, so they prefer A. The voter at 6.5 gets −3.5 from A and −3 from B, so they prefer B. You can show any voter’s utility function with the buttons under the figure.</li></ol>" +
+          "<p>In general, assuming A &lt; B, the cutpoint is " + mathSpan("(αA + βB) / (α + β)") + ". If B is to the left of A, swap them, so that α always multiplies the alternative on the left. With symmetric utility, α = β, this becomes " + mathSpan("(A + B) / 2") + ", which is the midpoint.</p>"),
+        "Why has the cutpoint moved right, from the midpoint at 5.5 to 6.33? For every voter, utility falls twice as fast to the right of their ideal point as to the left. So for a voter between the alternatives, a unit of distance to B, on their right, costs twice as much as a unit of distance to A, on their left. Voters lean toward the alternative on the left. Some voters who are closer to B, like the voter at 6, now prefer A, and the cutpoint moves right to reflect this. A now gets the voters at 0.5, 2, 3.5 and 6, and wins four votes to three."
+      ] },
+    { title: "Does the midpoint rule survive?", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(8), vshape: "asym" }), show: { voters: true, alts: true, cut: true, ghostMid: true, color: true, bands: true },
+      ctrl: [{ type: "chips", key: "vshape", label: "Voters’ utility", opts: [{ v: "lin", t: "Symmetric" }, { v: "asym", t: "Asymmetric" }] }], read: readVshape,
+      ws: ["vshape", "alts", "cut", "nA", "nB", "res"],
+      sub: "Switch between symmetric and asymmetric voters with the buttons under the figure.",
+      body: [
+        "As the previous example shows, the midpoint rule gives the cutpoint for deciding which alternative voters prefer when they have symmetric utility functions. However, it doesn’t necessarily give the right cutpoint when voters have asymmetric utility functions.",
+        "To see this, switch between symmetric and asymmetric voters with the buttons under the figure. The voters, their ideal points and the two alternatives stay the same. Only whether the voters’ utility functions are symmetric or asymmetric changes, and the winner changes with it. With symmetric utility, the cutpoint is the midpoint, 5.5, and B wins four votes to three. With asymmetric utility, the cutpoint is 6.33, and A wins four votes to three.",
+        "The midpoint between the two alternatives is the same whether utility is symmetric or asymmetric. What changes is whether it’s useful. The midpoint rule works because we assume that voters have symmetric utility functions. With asymmetric utility, each voter compares utilities directly, and where the cutpoint falls depends on how fast utility falls on each side of the voters’ ideal points."
+      ] },
+    { title: "Pareto improvements and Pareto efficiency", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, vshape: "lin", px: dec(4.5), py: dec(5.5) }), show: { voters: true, px: true, py: true },
+      ctrl: [{ type: "slider", key: "px", label: "The starting policy, x", min: 0, max: 10, step: 0.5 }, { type: "slider", key: "py", label: "The policy it moves to, y", min: 0, max: 10, step: 0.5 }], read: readMove,
+      ws: ["voters", "mx", "my", "mb", "mw", "ms", "mp"],
+      sub: "Move the starting policy x and the policy y it moves to with the sliders under the figure.",
+      body: [
+        "The indifference set and the preferred-to set belong to one actor and a reference policy, such as the status quo. The Pareto set is different. It belongs to a whole group of actors, and it doesn’t depend on any reference policy. To get there, we start with what it means to improve on a policy.",
+        stmt("Pareto improvements and Pareto efficiency", "<ul class='recap'><li>A move from policy <em>x</em> to policy <em>y</em> is a <strong>Pareto improvement</strong> if it makes at least one actor strictly better off and leaves every actor at least as well off.</li><li>A policy is <strong>Pareto efficient</strong> if no Pareto improvement is possible from it.</li></ul>"),
+        "Suppose we have some policy. If we can’t move it and make someone better off without making someone else worse off, that policy is Pareto efficient. Take the seven voters from before, but give them symmetric utility functions again, and start from policy 4.5. A move from 4.5 to 5.5 helps the voters at 6, 6.5, 8 and 9.5, but hurts the voters at 0.5, 2 and 3.5. A move from 4.5 to the left does the reverse. Wherever we move it, someone is worse off, so 4.5 is Pareto efficient.",
+        "Now start from policy 10, to the right of every voter. A move from 10 to 9.5 brings the policy closer to every voter’s ideal point, so every voter is strictly better off. That move is a Pareto improvement, so 10 is not Pareto efficient. It takes only one such move. In fact, with these symmetric utility functions, a move from 10 to any policy from 9 up to 10 is a Pareto improvement. At 9, the voter at 9.5 is the same distance from the policy as at 10, so they are exactly as well off, and every other voter is strictly better off. A move farther left than 9 makes the voter at 9.5 worse off.",
+        "Try other moves with the two sliders under the figure."
+      ] },
+    { title: "The Pareto set", look: ["fig", "ws"],
+      st: st({ voters: VOTERS, vshape: "lin", px: dec(0) }), show: { voters: true, pareto: true, px: true },
+      ctrl: [{ type: "slider", key: "px", label: "A policy, x", min: 0, max: 10, step: 0.5 }], read: readPx,
+      ws: ["voters", "par", "px", "pe"],
+      sub: "Move the policy x with the slider under the figure.",
+      body: [
+        "The <strong>Pareto set</strong> is the set of all Pareto efficient policies. In a one-dimensional policy space where actors have single-peaked preferences, it is the closed interval from the leftmost actor’s ideal point to the rightmost actor’s ideal point.",
+        "In the example here, the leftmost voter’s ideal point is 0.5 and the rightmost voter’s is 9.5. As a result, the Pareto set is [0.5, 9.5]. Starting from a policy inside the Pareto set, any move makes at least one voter worse off, as the moves from 4.5 showed. The move need not make anyone better off. Starting from a policy outside the Pareto set, there is always at least one move that makes every voter strictly better off, namely a move to the nearest end of the set, as the move from 10 showed. The ends belong to the set too. From 0.5, a move to the right makes the voter at 0.5 worse off, and a move to the left makes every voter worse off.",
+        "The Pareto set is the same whether the voters have symmetric or asymmetric preferences. All that’s required is that their preferences be single-peaked. And unlike the preferred-to set, it doesn’t depend on any status quo, only on where the actors’ ideal points are.",
+        "Move the policy with the slider under the figure to check any policy."
+      ] },
+    { title: "What the walkthrough found", look: ["fig"],
+      st: st({ voters: VOTERS, A: dec(3), B: dec(8), vshape: "asym" }), show: { voters: true, alts: true, cut: true, ghostMid: true, color: true, bands: true },
+      ws: ["vshape", "alts", "cut", "res"],
+      sub: "Seven voters with asymmetric utility functions, choosing between A = 3 and B = 8.",
+      body: [
+        "<div><ul class='recap'>" +
+          "<li>A utility function represents an actor’s preference ranking over the policy alternatives. Spatial models typically assume that utility falls as policy moves farther from the actor’s ideal point, in any direction. Linear, quadratic and square-root utility can give very different numbers to the same policy alternatives but always give the same preference ranking over them, because each falls as distance grows. Preferences like these are called single-peaked.</li>" +
+          "<li>Preferences are strictly single-peaked when utility always falls as policy moves away from the ideal point, and weakly single-peaked when it never rises but can stay flat in places. An actor can have an ideal point without having single-peaked preferences. Symmetry is a separate assumption. With symmetric preferences, utility falls at the same rate on either side of the ideal point.</li>" +
+          "<li>Given a status quo, the indifference set I(SQ) identifies the policies that give the actor the same utility as the SQ, and the preferred-to set P(SQ) is the open interval of policies the actor strictly prefers to the SQ. With any symmetric utility function, I(SQ) = {z − r, z + r} and P(SQ) = (z − r, z + r). With asymmetric utility, P(SQ) is no longer centered on the ideal point and stretches farther on the side where utility falls more slowly. P(SQ) depends on where the status quo is, and it can run past the end of the policy space.</li>" +
+          "<li>An actor prefers the alternative that gives them the higher utility. With symmetric utility, the midpoint between two alternatives is the cutpoint that splits the voters into those who prefer each alternative. With asymmetric utility, the cutpoint moves away from the midpoint, and the winner can change. A voter exactly at the cutpoint is indifferent.</li>" +
+          "<li>A move is a Pareto improvement if it makes at least one actor strictly better off and leaves every actor at least as well off. In a one-dimensional policy space where actors have single-peaked preferences, the Pareto set runs from the leftmost ideal point to the rightmost. It depends only on where the actors’ ideal points are.</li></ul></div>",
+        "Explore lets you set up your own actor or voters, and practice has cases to work through."
+      ] }
+  ];
+
+  /* ----- controls under the figure ----- */
+  var step = 0, gs = null;
+  function cloneState(s) { var o = {}; for (var k in s) o[k] = s[k]; return o; }
+  function buildCtrl(stp) {
+    var host = $("stepCtrl"); host.innerHTML = "";
+    if (!stp.ctrl) return;
+    var box = document.createElement("div"); box.className = "slider-box";
+    stp.ctrl.forEach(function (c, ci) {
+      if (c.type === "slider") {
+        var id = "gc" + ci, wrap = document.createElement("div"); wrap.className = "ctrl";
+        wrap.innerHTML = "<div class='ctrl-head'><label for='" + id + "'>" + c.label + "</label><span class='ctrl-val' id='" + id + "v'></span></div>" +
+          "<input type='range' id='" + id + "' min='" + c.min + "' max='" + c.max + "' step='" + c.step + "' value='" + fval(gs[c.key]) + "'>" +
+          "<div class='scale'><span>" + c.min + "</span><span>" + c.max + "</span></div>";
+        box.appendChild(wrap);
+      } else {
+        var lid = "gl" + ci, g = document.createElement("div"); g.className = "chips-group";
+        g.innerHTML = "<span class='group-label' id='" + lid + "'>" + c.label + "</span><div class='chips' role='group' aria-labelledby='" + lid + "'>" +
+          c.opts.map(function (op, i) { return "<button type='button' class='chip small' data-c='" + ci + "' data-i='" + i + "' aria-pressed='false'>" + op.t + "</button>"; }).join("") + "</div>";
+        box.appendChild(g);
+      }
+    });
+    var rd = document.createElement("p"); rd.className = "slider-read"; rd.id = "gRead"; box.appendChild(rd);
+    host.appendChild(box);
+    stp.ctrl.forEach(function (c, ci) {
+      if (c.type === "slider") {
+        $("gc" + ci).addEventListener("input", function () { gs[c.key] = dec(Number($("gc" + ci).value)); refresh(true); });
+      } else host.querySelectorAll("[data-c='" + ci + "']").forEach(function (b) {
+        b.addEventListener("click", function () { gs[c.key] = c.opts[Number(b.getAttribute("data-i"))].v; refresh(true); });
+      });
+    });
+  }
+  function syncCtrl(stp) {
+    if (!stp.ctrl) return "";
+    stp.ctrl.forEach(function (c, ci) {
+      if (c.type === "slider") { $("gc" + ci + "v").textContent = fmt(gs[c.key]); $("gc" + ci).value = fval(gs[c.key]); }
+      else $("stepCtrl").querySelectorAll("[data-c='" + ci + "']").forEach(function (b) {
+        var v = c.opts[Number(b.getAttribute("data-i"))].v;
+        b.setAttribute("aria-pressed", (typeof v === "object" ? fcmp(v, gs[c.key]) === 0 : v === gs[c.key]) ? "true" : "false");
+      });
+    });
+    var txt = stp.read ? stp.read(gs) : "";
+    $("gRead").textContent = txt;
+    stp.ctrl.forEach(function (c, ci) { if (c.type === "slider") $("gc" + ci).setAttribute("aria-valuetext", fmt(gs[c.key]) + ". " + txt); });
+    return txt;
+  }
+  function refresh(announce) {
+    var stp = STEPS[step];
+    draw(sceneFor(stp, gs), stp.sub);
+    renderWs(stp.ws, gs, false);
+    var txt = syncCtrl(stp);
+    if (announce && txt) say(txt);
+  }
+
+  var dotsEl = $("dots");
+  STEPS.forEach(function (stp, i) {
+    var d = document.createElement("button");
+    d.type = "button"; d.className = "dot";
+    d.setAttribute("aria-label", "Step " + (i + 1) + ": " + stp.title);
+    d.title = "Step " + (i + 1) + ": " + stp.title;
+    d.addEventListener("click", function () { if (i === step) return; var p = step; step = i; renderGuided(p); });
+    dotsEl.appendChild(d);
+  });
+
+  function renderGuided(prev) {
+    var stp = STEPS[step];
+    gs = cloneState(stp.st);
+    var before = $("fig").innerHTML;
+    draw(sceneFor(stp, gs), stp.sub);
+    renderWs(stp.ws, gs, true);
+    $("stepLabel").textContent = "Step " + (step + 1) + " of " + STEPS.length;
+    $("stepTitle").textContent = stp.title;
+    $("stepBody").innerHTML = stp.body.map(function (t) { return t.indexOf("<div") === 0 ? t : "<p>" + t + "</p>"; }).join("");
+    lookButtons($("stepLook"), stp.look);
+    buildCtrl(stp); syncCtrl(stp);
+    $("prevBtn").disabled = step === 0;
+    $("nextBtn").disabled = step === STEPS.length - 1;
+    var dots = dotsEl.children;
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = "dot" + (i === step ? " on" : "");
+      if (i === step) dots[i].setAttribute("aria-current", "step"); else dots[i].removeAttribute("aria-current");
+    }
+    /* take the reader to the figure when a forward step changed it */
+    if (prev !== undefined && step > prev && $("fig").innerHTML !== before) bring("fig");
+  }
+  $("prevBtn").addEventListener("click", function () { if (step > 0) { var p = step; step--; renderGuided(p); } });
+  $("nextBtn").addEventListener("click", function () { if (step < STEPS.length - 1) { var p = step; step++; renderGuided(p); } });
+
+  /* ================= explore ================= */
+
+  var eView = "one";
+  var eo = { shape: "lin", z: Z, al: ONE, be: TWO, h: dec(0.5), cap: F(4), sq: dec(5), prop: dec(8.5) };
+  var eShow = { sets: false, cut: false, count: false, pareto: false };
+  var E_PRESETS = [
+    { id: "seven", t: "The walkthrough’s seven voters", vs: [0.5, 2, 3.5, 6, 6.5, 8, 9.5], a: 3, b: 8 },
+    { id: "atmid", t: "The walkthrough’s voter at the midpoint", vs: [0.5, 2, 3.5, 6, 6.5, 8, 9.5], a: 3, b: 9 },
+    { id: "left", t: "Bunched to the left", vs: [0.5, 1.5, 2, 2.5, 3, 7.5, 9], a: 1, b: 6 },
+    { id: "even", t: "Spread evenly", vs: [1, 2.5, 4, 5.5, 7, 8.5, 10], a: 4.5, b: 7.5 },
+    { id: "flip", t: "Asymmetry changes the winner", vs: [1, 2.5, 4.5, 5.5, 8], a: 3.5, b: 6.5, al: 3, be: 1 }
+  ];
+  var EMAXV = 15, EMAXSTACK = 6;
+  var ev = { voters: [], A: dec(3), B: dec(8), vshape: "lin", al: ONE, be: TWO, focus: null, px: dec(10), py: dec(9.5), preset: "seven" };
+  function eSort() { ev.voters.sort(function (a, b) { return fcmp(a, b); }); }
+  function eLoadPreset(pr) {
+    ev.voters = D(pr.vs); ev.A = dec(pr.a); ev.B = dec(pr.b); ev.preset = pr.id; ev.focus = null;
+    if (pr.al) { ev.al = dec(pr.al); ev.be = dec(pr.be); ev.vshape = "lin"; }
+    eSort();
+  }
+  eLoadPreset(E_PRESETS[0]);
+
+  var E_SHAPES = [{ v: "lin", t: "Linear" }, { v: "quad", t: "Quadratic" }, { v: "sqrt", t: "Square root" }, { v: "asym", t: "Asymmetric" }];
+
+  function eScene() {
+    if (eView === "one") {
+      var sh = { curve: true, ideal: true, sq: true, prop: true, level: eShow.sets, pset: eShow.sets,
+                 marks: eShow.sets ? null : function (s) { return [{ x: s.sq, quiet: true }]; } };
+      return { sc: sceneFor({ show: sh }, eo), sub: "Your actor, status quo and proposal." };
+    }
+    var shv = { voters: true, alts: true, cut: eShow.cut, ghostMid: eShow.cut, color: eShow.count, bands: eShow.count,
+                pareto: eShow.pareto, px: eShow.pareto, py: eShow.pareto, focusCurve: ev.focus !== null,
+                marks: ev.focus !== null ? function (s) { return [{ x: s.A, lab: "u(A) =" }, { x: s.B, lab: "u(B) =" }]; } : null };
+    return { sc: sceneFor({ show: shv }, ev), sub: ev.focus !== null ? "The utility function shown is for the voter at " + fmt(ev.focus) + "." : "Your voters and alternatives." };
+  }
+  function eWsKeys() {
+    if (eView === "one") return ["z", "fn", "sq", "usq"].concat(eShow.sets ? ["ind", "ps"] : []).concat(["p", "up", "pv"]);
+    var k = ["voters", "vshape", "alts"];
+    if (eShow.cut) k.push("cut");
+    if (eShow.count) k = k.concat(["nA", "nB", "n0", "res"]);
+    if (ev.focus !== null) k = k.concat(["fz", "fuA", "fuB", "fv"]);
+    if (eShow.pareto) k = k.concat(["par", "mx", "my", "mb", "mw", "ms", "mp"]);
+    return k;
+  }
+
+  /* the readout: what the controls just did, in words, and only what the switches allow */
+  function eReadOne() {
+    var p = actorP(eo), c = prefers(p, eo.prop, eo.sq), up = ufmt(p, eo.prop), us = ufmt(p, eo.sq);
+    var t = "u(SQ) = " + us + " and u(p) = " + up + ". ";
+    if (p.shape !== "asym") t += "The proposal is " + fmt(fabs(fsub(eo.prop, eo.z))) + " from the ideal point, and the status quo is " + fmt(fabs(fsub(eo.sq, eo.z))) + " away. ";
+    t += c > 0 ? "The actor prefers p to the status quo." : c < 0 ? "The actor prefers the status quo to p." : "The actor is indifferent between p and the status quo.";
+    if (eShow.sets) {
+      var ps = pset(p, eo.sq);
+      if (!ps) t += " The status quo is at the ideal point, so I(SQ) = {" + fmt(eo.z) + "} and P(SQ) is empty.";
+      else {
+        t += " I(SQ) = " + indText(indiffSet(p, eo.sq)) + " and P(SQ) = " + setText(ps) + ".";
+        if (fcmp(ps.hi, F(10)) > 0 && fcmp(ps.lo, ZERO) < 0) t += " It runs past both ends of the policy space.";
+        else if (fcmp(ps.hi, F(10)) > 0) t += " It runs past 10, so within the policy space the actor prefers every policy to the right of " + fmt(ps.lo) + ".";
+        else if (fcmp(ps.lo, ZERO) < 0) t += " It runs past 0, so within the policy space the actor prefers every policy to the left of " + fmt(ps.hi) + ".";
+      }
+    }
+    return t;
+  }
+  function eReadMany() {
+    var t = voterWord(ev.voters.length).replace(/^./, function (m) { return m.toUpperCase(); }) + ". A is at " + fmt(ev.A) + " and B at " + fmt(ev.B) + ".";
+    if (fcmp(ev.A, ev.B) === 0) t += " The alternatives are in the same place, so every voter is indifferent.";
+    if (eShow.cut && fcmp(ev.A, ev.B) !== 0) t += (ev.vshape === "asym" ? " The cutpoint is " : " The midpoint is ") + fmt(cutpoint(vpOf(ev), ev.A, ev.B)) + ".";
+    if (eShow.count) { var rr = resultOf(tally(vpOf(ev), ev.voters, ev.A, ev.B)); t += " " + rr.text + "."; }
+    if (ev.focus !== null) t += " " + readFocus(ev);
+    if (eShow.pareto) { var ps = paretoSet(ev.voters); t += " The Pareto set is [" + fmt(ps.lo) + ", " + fmt(ps.hi) + "]. " + readMove(ev); }
+    return t;
+  }
+
+  function eSyncSlider(id, val) { $(id).value = fval(val); $(id + "V").textContent = fmt(val); }
+  function pressed(id, on) { $(id).setAttribute("aria-pressed", on ? "true" : "false"); }
+
+  function renderExplore(announce) {
+    $("eOne").hidden = eView !== "one"; $("eMany").hidden = eView !== "many";
+    pressed("eViewOne", eView === "one"); pressed("eViewMany", eView === "many");
+    var r;
+    if (eView === "one") {
+      $("eShapes").querySelectorAll("button").forEach(function (b) { pressed(b.id, b.getAttribute("data-v") === eo.shape); });
+      $("eAsym").hidden = eo.shape !== "asym";
+      eSyncSlider("eAl", eo.al); eSyncSlider("eBe", eo.be); eSyncSlider("eZ", eo.z); eSyncSlider("eSq", eo.sq); eSyncSlider("eP", eo.prop);
+      pressed("eSets", eShow.sets);
+      r = eReadOne();
+    } else {
+      buildEPresets(); buildEList(); buildEFocus(); eVoterNote();
+      pressed("eSym", ev.vshape !== "asym"); pressed("eAsymV", ev.vshape === "asym");
+      $("eVAsym").hidden = ev.vshape !== "asym";
+      eSyncSlider("eVAl", ev.al); eSyncSlider("eVBe", ev.be); eSyncSlider("eA", ev.A); eSyncSlider("eB", ev.B);
+      eSyncSlider("eNew", dec(Number($("eNew").value)));
+      pressed("eCut", eShow.cut); pressed("eCount", eShow.count); pressed("ePareto", eShow.pareto);
+      $("eMove").hidden = !eShow.pareto; eSyncSlider("eX", ev.px); eSyncSlider("eY", ev.py);
+      r = eReadMany();
+    }
+    var sc = eScene();
+    draw(sc.sc, sc.sub);
+    renderWs(eWsKeys(), eView === "one" ? eo : ev, false);
+    $("eRead").textContent = r;
+    $("eCoinNote").hidden = !(eView === "many" && eShow.count && resultOf(tally(vpOf(ev), ev.voters, ev.A, ev.B)).coins);
+    ["eAl", "eBe", "eZ", "eSq", "eP", "eVAl", "eVBe", "eA", "eB", "eX", "eY"].forEach(function (id) {
+      $(id).setAttribute("aria-valuetext", $(id + "V").textContent + ". " + r);
+    });
+    if (announce) say(r);
+  }
+
+  function buildEPresets() {
+    var host = $("ePresets"); host.innerHTML = "";
+    E_PRESETS.forEach(function (pr) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip small";
+      b.setAttribute("aria-pressed", ev.preset === pr.id ? "true" : "false"); b.textContent = pr.t;
+      b.addEventListener("click", function () {
+        eLoadPreset(pr); renderExplore(false);
+        say("Voters reset. " + ev.voters.length + " voters at " + listNums(ev.voters) + ". A at " + fmt(ev.A) + " and B at " + fmt(ev.B) + "." +
+            (pr.al ? " Switch the voters’ utility to asymmetric, with α = " + fmt(ev.al) + " and β = " + fmt(ev.be) + ", to see the winner change." : ""));
+      });
+      host.appendChild(b);
+    });
+  }
+  function eStacks() {
+    var st = {}, keys = [];
+    ev.voters.forEach(function (z) { var k = fval(z); if (!st[k]) { st[k] = 0; keys.push(z); } st[k]++; });
+    return { st: st, keys: keys };
+  }
+  function buildEList() {
+    var host = $("eList"); host.innerHTML = "";
+    var S = eStacks();
+    S.keys.forEach(function (z) {
+      var n = S.st[fval(z)], b = document.createElement("button"); b.type = "button"; b.className = "chip small";
+      b.innerHTML = "<span class='data'>" + fmt(z) + "</span>" + (n > 1 ? " ×" + n : "") + "<span class='x' aria-hidden='true'>✕</span>";
+      b.setAttribute("aria-label", "Remove a voter at " + fmt(z) + (n > 1 ? " (" + n + " voters there)" : ""));
+      b.disabled = ev.voters.length <= 1;
+      b.addEventListener("click", function () {
+        if (ev.voters.length <= 1) return;
+        for (var i = 0; i < ev.voters.length; i++) if (fcmp(ev.voters[i], z) === 0) { ev.voters.splice(i, 1); break; }
+        ev.preset = null;
+        if (ev.focus !== null && !ev.voters.some(function (v) { return fcmp(v, ev.focus) === 0; })) ev.focus = null;
+        renderExplore(false);
+        say("Removed a voter at " + fmt(z) + ". " + ev.voters.length + " voters.");
+        var first = $("eList").querySelector("button"); if (first) first.focus();
+      });
+      host.appendChild(b);
+    });
+  }
+  function buildEFocus() {
+    var host = $("eFocus"); host.innerHTML = "";
+    var opts = [null].concat(eStacks().keys);
+    opts.forEach(function (z) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip small";
+      b.textContent = z === null ? "None" : fmt(z);
+      b.setAttribute("aria-pressed", (z === null ? ev.focus === null : ev.focus !== null && fcmp(z, ev.focus) === 0) ? "true" : "false");
+      b.addEventListener("click", function () { ev.focus = z; renderExplore(true); });
+      host.appendChild(b);
+    });
+  }
+  function eVoterNote() {
+    var z = dec(Number($("eNew").value)), here = ev.voters.filter(function (v) { return fcmp(v, z) === 0; }).length;
+    var full = ev.voters.length >= EMAXV, tall = here >= EMAXSTACK;
+    $("eAdd").disabled = full || tall;
+    $("eVoterNote").textContent = full ? "That’s the most voters this tool shows (" + EMAXV + "). Remove one to add another." :
+      tall ? "There are already " + EMAXSTACK + " voters at " + fmt(z) + ", the most one point can hold here." :
+      ev.voters.length + " voters now. Up to " + EMAXV + " in all, and " + EMAXSTACK + " at any one point.";
+  }
+
+  /* wiring */
+  E_SHAPES.forEach(function (o) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "chip small"; b.id = "eShape-" + o.v;
+    b.setAttribute("data-v", o.v); b.setAttribute("aria-pressed", "false"); b.textContent = o.t;
+    b.addEventListener("click", function () { eo.shape = o.v; renderExplore(true); });
+    $("eShapes").appendChild(b);
+  });
+  function eSlide(id, obj, key) { $(id).addEventListener("input", function () { obj[key] = dec(Number($(id).value)); renderExplore(true); }); }
+  eSlide("eAl", eo, "al"); eSlide("eBe", eo, "be"); eSlide("eZ", eo, "z"); eSlide("eSq", eo, "sq"); eSlide("eP", eo, "prop");
+  eSlide("eVAl", ev, "al"); eSlide("eVBe", ev, "be"); eSlide("eA", ev, "A"); eSlide("eB", ev, "B"); eSlide("eX", ev, "px"); eSlide("eY", ev, "py");
+  $("eNew").addEventListener("input", function () { $("eNewV").textContent = fmt(dec(Number($("eNew").value))); eVoterNote(); });
+  $("eAdd").addEventListener("click", function () {
+    var z = dec(Number($("eNew").value));
+    if (ev.voters.length >= EMAXV || ev.voters.filter(function (v) { return fcmp(v, z) === 0; }).length >= EMAXSTACK) return;
+    ev.voters.push(z); eSort(); ev.preset = null; renderExplore(false);
+    say("Added a voter at " + fmt(z) + ". " + ev.voters.length + " voters.");
+  });
+  $("eViewOne").addEventListener("click", function () { eView = "one"; renderExplore(true); });
+  $("eViewMany").addEventListener("click", function () { eView = "many"; renderExplore(true); });
+  $("eSym").addEventListener("click", function () { ev.vshape = "lin"; renderExplore(true); });
+  $("eAsymV").addEventListener("click", function () { ev.vshape = "asym"; renderExplore(true); });
+  [["eSets", "sets"], ["eCut", "cut"], ["eCount", "count"], ["ePareto", "pareto"]].forEach(function (q) {
+    $(q[0]).addEventListener("click", function () { eShow[q[1]] = !eShow[q[1]]; renderExplore(true); });
+  });
+
+  /* ================= practice =================
+     Thirteen authored cases in six groups. Every answer, and every option offered, is worked out
+     from the case by the model above; the distractors are real mistakes. The cases keep clear of
+     the notes, the problem bank, the walkthrough and the explore presets. */
+
+  var P_GROUPS = [
+    { id: "rank", label: "Is the ranking single-peaked?", desc: "Five alternatives in order. Decide whether each ranking is strictly single-peaked, weakly single-peaked or not single-peaked." },
+    { id: "sym", label: "One actor, symmetric utility", desc: "Cases 3 and 4 have the same actor, with the status quo on opposite sides of the ideal point." },
+    { id: "asym", label: "One actor, asymmetric utility", desc: "Case 7 has the same ideal point and status quo as Case 3, but asymmetric utility." },
+    { id: "vsym", label: "Two alternatives, symmetric voters", desc: "" },
+    { id: "vasym", label: "Two alternatives, asymmetric voters", desc: "Cases 11 and 12 have the same voters and alternatives as Cases 9 and 10, but asymmetric utility." },
+    { id: "par", label: "The Pareto set", desc: "" }
+  ];
+  /* rankings: rank of each alternative in order along the line, 1 = best, equal numbers = indifferent */
+  var P_CASES = [
+    { id: "1", group: "rank", kind: "rank", what: "tax rates", alts: ["10%", "20%", "30%", "40%", "50%"],
+      ranks: [[5, 4, 3, 2, 1], [1, 2, 5, 4, 3], [4, 3, 1, 1, 2]] },
+    { id: "2", group: "rank", kind: "rank", what: "levels of the minimum wage", alts: ["$8", "$10", "$12", "$14", "$16"],
+      ranks: [[3, 1, 2, 2, 2], [4, 3, 1, 2, 4], [1, 4, 3, 2, 5]] },
+    { id: "3", group: "sym", kind: "one", shape: "lin", z: 5.5, sq: 8, props: [2.5, 3, 4, 7.5] },
+    { id: "4", group: "sym", kind: "one", shape: "lin", z: 5.5, sq: 1.5, props: [1, 3, 9, 10], empty: true },
+    { id: "5", group: "sym", kind: "one", shape: "sqrt", z: 8, sq: 4, props: [3.5, 6, 9.5, 10] },
+    { id: "6", group: "sym", kind: "one", shape: "quad", z: 2.5, sq: 0.5, props: [0, 3, 4, 4.5] },
+    { id: "7", group: "asym", kind: "one", shape: "asym", z: 5.5, al: 2.5, be: 1, sq: 8, props: [4, 4.5, 5, 7.5] },
+    { id: "8", group: "asym", kind: "one", shape: "asym", z: 6.5, al: 1.5, be: 3, sq: 2.5, props: [3, 8, 8.5, 9.5] },
+    { id: "9", group: "vsym", kind: "vote", vs: [0.5, 1.5, 3, 3.5, 6.5, 8.5, 9], A: 2, B: 6, vshape: "lin", ask: "A" },
+    { id: "10", group: "vsym", kind: "vote", vs: [1, 2, 3.5, 5, 6, 8, 9.5], A: 3, B: 7, vshape: "lin", ask: "B" },
+    { id: "11", group: "vasym", kind: "vote", vs: [0.5, 1.5, 3, 3.5, 6.5, 8.5, 9], A: 2, B: 6, vshape: "asym", al: 2, be: 3, ask: "A" },
+    { id: "12", group: "vasym", kind: "vote", vs: [1, 2, 3.5, 5, 6, 8, 9.5], A: 3, B: 7, vshape: "asym", al: 1, be: 1.5, ask: "A" },
+    { id: "13", group: "par", kind: "pareto", vs: [1.5, 3, 3, 6.5, 8], from: 9.5, moves: [6, 8, 9, 10], eff: [1, 5] }
+  ];
+
+  /* ----- the model's answers ----- */
+  function pActor(c) { return { shape: c.shape, z: dec(c.z), al: dec(c.al || 1), be: dec(c.be || 1), h: dec(0.5), cap: F(4) }; }
+  function rankClass(r) {
+    var u = r.map(function (x) { return -x; }), n = u.length;
+    function fits(strict) {
+      for (var p = 0; p < n; p++) {
+        var ok = true;
+        for (var i = 0; i < p; i++) if (strict ? !(u[i] < u[i + 1]) : !(u[i] <= u[i + 1])) ok = false;
+        for (var j = p; j < n - 1; j++) if (strict ? !(u[j] > u[j + 1]) : !(u[j] >= u[j + 1])) ok = false;
+        if (ok) return true;
+      }
+      return false;
+    }
+    return fits(true) ? "strict" : fits(false) ? "weak" : "not";
+  }
+  function rankText(c, r) {
+    var lv = r.slice().sort(function (a, b) { return a - b; }).filter(function (x, i, a) { return i === 0 || x !== a[i - 1]; });
+    return lv.map(function (k) { return r.map(function (x, i) { return x === k ? c.alts[i] : null; }).filter(function (x) { return x; }).join(" ∼ "); }).join(" ≻ ");
+  }
+  function rankTable(c, r) {
+    return "<div class='table-scroll'><table class='nums'><caption>The ranking, alternatives in order along the line (1 is best, and equal numbers mean the actor is indifferent)</caption><tbody>" +
+      "<tr><th scope='row'>Alternative</th>" + c.alts.map(function (a) { return "<td>" + a + "</td>"; }).join("") + "</tr>" +
+      "<tr><th scope='row'>Rank</th>" + r.map(function (x) { return "<td>" + x + "</td>"; }).join("") + "</tr></tbody></table></div>";
+  }
+  /* why a ranking is or isn't single-peaked, read off the ranking itself */
+  function rankWhy(c, r) {
+    var u = r.map(function (x) { return -x; }), top = Math.max.apply(null, u), cls = rankClass(r);
+    var peaks = u.map(function (x, i) { return x === top ? i : -1; }).filter(function (i) { return i >= 0; });
+    var best = peaks.map(function (i) { return c.alts[i]; }).join(" and ");
+    if (cls === "not") {
+      for (var i = 0; i < u.length - 1; i++) {
+        var away = i + 1 > peaks[peaks.length - 1] ? [i, i + 1] : i < peaks[0] ? [i + 1, i] : null;
+        if (away && u[away[1]] > u[away[0]]) return "Moving away from the best alternative, " + best + ", the actor ranks " + c.alts[away[1]] + " above " + c.alts[away[0]] + ", even though " + c.alts[away[1]] + " is farther away on the same side. Utility rises again, so the ranking is not single-peaked.";
+      }
+      return "Utility rises again somewhere as you move away from the best alternative, so the ranking is not single-peaked.";
+    }
+    if (cls === "weak") {
+      if (peaks.length > 1) return "The actor is indifferent between " + best + ", the best alternatives, so there is a plateau at the top. Moving away from it, utility never rises. So the ranking is weakly single-peaked, but not strictly.";
+      var run = [];
+      for (var k = 0; k < u.length - 1; k++) if (u[k] === u[k + 1]) { if (run.indexOf(k) < 0) run.push(k); run.push(k + 1); }
+      var names = run.map(function (i) { return c.alts[i]; }), list = names.length === 2 ? names.join(" and ") : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+      return "Moving away from the best alternative, " + best + ", utility never rises, but the actor is indifferent among " + list + ", which sit next to each other on the same side. That flat stretch makes the ranking weakly single-peaked, but not strictly.";
+    }
+    var cross = r.some(function (x, i) { return r.some(function (y, j) { return i < peaks[0] && j > peaks[0] && x === y; }); });
+    var end = peaks[0] === 0 || peaks[0] === u.length - 1;
+    return "Moving away from the best alternative, " + best + ", every step on each side makes the actor strictly worse off. So the ranking is strictly single-peaked." +
+      (end ? " The peak can be at an end of the line." : "") + (cross ? " A tie between alternatives on opposite sides of the peak is allowed, because the definition compares only policies on the same side." : "");
+  }
+  function rankWrong(c, r, chose) {
+    var cls = rankClass(r);
+    if (cls === "not") return "Start at the best alternative and move outward one step at a time, first to one side and then to the other. Does the actor ever rank a farther alternative above a nearer one on the same side?";
+    if (cls === "weak") return chose === "strict" ? "Look for two neighboring alternatives on the same side of the peak, or at the top, that the actor is indifferent between." :
+      "Moving away from the best alternative, does utility ever rise? Staying the same is allowed in the weak version.";
+    var cross = r.some(function (x, i) { return r.some(function (y, j) { return i !== j && x === y; }); });
+    var end = r.indexOf(1) === 0 || r.indexOf(1) === r.length - 1;
+    return (end && chose === "not" ? "The best alternative can be at the end of the line. " : "") + (cross ? "The definition compares only policies on the same side of the peak, so a tie across the peak doesn’t count. " : "") +
+      "Move outward from the best alternative on each side. Is every step strictly worse?";
+  }
+
+  /* ----- options -----
+     An option is { text, key, right, why }. Each pool lists real mistakes, most common first. pick() keeps
+     the correct option and three mistakes, always including the most common, and shows them smallest
+     first. Which of the others it uses varies where the correct option sits from question to question. */
+  var pickCount = 0, PICK_TARGETS = [2, 4, 1, 3, 3, 1, 4, 2, 1, 2, 4, 3];
+  function pick(right, pool) {
+    var seen = {}, cand = [];
+    right.right = true; seen[right.text] = 1;
+    pool.forEach(function (p) { if (p && !seen[p.text]) { seen[p.text] = 1; cand.push(p); } });
+    var order = function (arr) { return arr.sort(function (a, b) { return a.key - b.key || (a.text < b.text ? -1 : 1); }); };
+    var target = PICK_TARGETS[pickCount++ % PICK_TARGETS.length];
+    if (cand.length <= 3) return order([right].concat(cand));
+    /* always keep the most common mistake; from the next four, take the two that put the correct
+       option nearest the target position, preferring the more common mistakes */
+    var first = cand[0], rest = cand.slice(1, 5), best = null, bestScore = 1e9;
+    for (var i = 0; i < rest.length; i++) for (var j = i + 1; j < rest.length; j++) {
+      var opts = order([right, first, rest[i], rest[j]]), pos = opts.indexOf(right) + 1;
+      var score = Math.abs(pos - target) * 10 + i + j;
+      if (score < bestScore) { bestScore = score; best = opts; }
+    }
+    return best;
+  }
+  function numOpt(f, why) { return { text: fmt(f), key: fval(f), why: why }; }
+  function ivOpt(lo, hi, why, closed) { return { text: (closed ? "[" : "(") + fmt(lo) + ", " + fmt(hi) + (closed ? "]" : ")"), key: fval(lo) * 1000 + fval(hi) + (closed ? 0.5 : 0), why: why, lo: lo, hi: hi }; }
+  function setOpt(arr, why) {
+    var s = arr.slice().sort(function (a, b) { return fcmp(a, b); }).filter(function (x, i, a) { return i === 0 || fcmp(x, a[i - 1]) !== 0; });
+    return { text: "{" + s.map(fmt).join(", ") + "}", key: fval(s[0]) * 1000 + fval(s[s.length - 1]) + s.length / 10, why: why };
+  }
+  function uOpt(p, x, why) { var q = uval(p, x); return q.f ? { text: fmt(q.f), key: fval(q.f), why: why } : null; }
+
+  function buildQs(c) {
+    var Q = [];
+    if (c.kind === "rank") {
+      c.ranks.forEach(function (r, i) {
+        Q.push({ id: "r" + i, q: "Ranking " + (i + 1) + ": " + rankText(c, r) + ". Is it single-peaked?", table: rankTable(c, r),
+          opts: [{ v: "strict", text: "Strictly single-peaked" }, { v: "weak", text: "Weakly single-peaked, but not strictly" }, { v: "not", text: "Not single-peaked" }].map(function (o) {
+            return { text: o.text, v: o.v, right: o.v === rankClass(r) };
+          }),
+          rightText: function () { return rankWhy(c, r); }, wrongText: function (o) { return rankWrong(c, r, o.v); } });
+      });
+      return Q;
+    }
+    if (c.kind === "one") {
+      var p = pActor(c), z = dec(c.z), sq = dec(c.sq), d = fabs(fsub(sq, z)), ps = pset(p, sq), asym = c.shape === "asym";
+      var left = fcmp(sq, z) < 0;
+      /* 1. u(SQ) */
+      var r1 = uOpt(p, sq, "right"), pool1 = [];
+      if (!asym) {
+        pool1.push(numOpt(d, "positive"));
+        ["lin", "quad", "sqrt"].forEach(function (sh) { if (sh !== c.shape) pool1.push(uOpt({ shape: sh, z: z }, sq, "shape")); });
+      } else {
+        pool1.push(numOpt(fneg(fmul(left ? p.be : p.al, d)), "rate"));
+        pool1.push(numOpt(fneg(d), "norate"));
+        pool1.push(numOpt(d, "positive"));
+      }
+      pool1.push(numOpt(fneg(sq), "position")); pool1.push(numOpt(fneg(z), "idealpos"));
+      Q.push({ id: "u", q: "What is the actor’s utility from the status quo, u(SQ)?", opts: pick(r1, pool1), num: true,
+        rightText: function () {
+          var how = asym ? (left ? "The status quo is " + fmt(d) + " to the left of the ideal point, where utility falls at rate α = " + fmt(p.al) + ", so u(SQ) = −" + fmt(p.al) + " × " + fmt(d) + " = " + ufmt(p, sq) + "."
+                                 : "The status quo is " + fmt(d) + " to the right of the ideal point, where utility falls at rate β = " + fmt(p.be) + ", so u(SQ) = −" + fmt(p.be) + " × " + fmt(d) + " = " + ufmt(p, sq) + ".")
+            : "The status quo is " + fmt(d) + " from the ideal point, so u(SQ) = " + (c.shape === "quad" ? "−" + fmt(d) + "² = " : c.shape === "sqrt" ? "−√" + fmt(d) + " = " : "−" + fmt(d) + " = ") + ufmt(p, sq) + ".";
+          return how;
+        },
+        wrongText: function (o) {
+          return (o.why === "positive" ? "That’s the distance. Utility is the negative of distance, or of a power of it. " :
+            o.why === "shape" ? "That uses a different utility function. Check which power of distance this actor’s function uses. " :
+            o.why === "rate" ? "That uses the rate for the other side of the ideal point. " :
+            o.why === "norate" ? "With asymmetric utility, distance is multiplied by the rate for the side the status quo is on. " :
+            o.why === "position" ? "Utility depends on the distance from the ideal point, not on the status quo’s position. " :
+            o.why === "idealpos" ? "Utility depends on the distance between the ideal point and the status quo, not on the ideal point’s position. " : "") +
+            "Find the distance from the ideal point, " + fmt(z) + ", to the status quo, " + fmt(sq) + ", then apply the utility function.";
+        } });
+      /* 2. I(SQ), symmetric cases only */
+      if (!asym) {
+        var twin = fsub(fmul(TWO, z), sq), pool2 = [setOpt([sq, fsub(fmul(TWO, sq), z)], "aroundsq"), setOpt([sq, z], "sqz")];
+        if (fcmp(twin, ZERO) >= 0 && fcmp(twin, F(10)) <= 0) pool2.push(setOpt([sq], "sqonly"));
+        pool2.push(setOpt([z], "z")); pool2.push(setOpt([twin], "twinonly"));
+        Q.push({ id: "i", q: "What is the indifference set, I(SQ)?", opts: pick(setOpt(indiffSet(p, sq), "right"), pool2), num: true, set: true,
+          rightText: function () { return "The policies with the same utility as the status quo are those the same distance, " + fmt(d) + ", from the ideal point: " + fmt(z) + " − " + fmt(d) + " and " + fmt(z) + " + " + fmt(d) + ". So I(SQ) = " + indText(indiffSet(p, sq)) + "." + (fcmp(twin, F(10)) > 0 || fcmp(twin, ZERO) < 0 ? " One of them is outside the policy space, but it still has the status quo’s utility." : ""); },
+          wrongText: function (o) {
+            return (o.why === "z" ? "The ideal point gives the highest utility, not the status quo’s. " : o.why === "sqz" ? "The ideal point gives a higher utility than the status quo. " :
+              o.why === "aroundsq" ? "The other policy is the same distance from the ideal point, not from the status quo. " : o.why === "sqonly" ? "There is another policy, on the other side of the ideal point, with the same utility. " :
+              o.why === "twinonly" ? "The status quo has the same utility as itself, so it belongs in the set too. " : "") +
+              "Which policies are exactly as far from " + fmt(z) + " as the status quo is?";
+          } });
+      }
+      /* 3. P(SQ) */
+      var right3 = ivOpt(ps.lo, ps.hi, "right"), pool3 = [];
+      if (asym) {
+        var symP = pset({ shape: "lin", z: z }, sq), swp = pset({ shape: "asym", z: z, al: p.be, be: p.al }, sq), reach = left ? fsub(ps.hi, z) : fsub(z, ps.lo);
+        pool3.push(ivOpt(symP.lo, symP.hi, "symmetric")); pool3.push(ivOpt(swp.lo, swp.hi, "swapped"));
+      }
+      pool3.push(ivOpt(ps.lo, ps.hi, "closed", true));
+      if (!asym) pool3.push(ivOpt(fsub(sq, d), fadd(sq, d), "aroundsq"));
+      else pool3.push(ivOpt(fsub(z, reach), fadd(z, reach), "centered"));
+      pool3.push(left ? ivOpt(sq, z, "half") : ivOpt(z, sq, "half"));
+      pool3.push(left ? ivOpt(z, ps.hi, "otherhalf") : ivOpt(ps.lo, z, "otherhalf"));
+      /* a set cut at 0 or 10 is never offered as a wrong answer */
+      pool3 = pool3.filter(function (o) { return !((fcmp(ps.hi, F(10)) > 0 && fcmp(o.hi, F(10)) === 0) || (fcmp(ps.lo, ZERO) < 0 && fcmp(o.lo, ZERO) === 0)); });
+      Q.push({ id: "p", q: "What is the preferred-to set, P(SQ)?", opts: pick(right3, pool3), num: true, set: true,
+        rightText: function () {
+          var past = fcmp(ps.hi, F(10)) > 0 ? " It runs past 10, so within the policy space the actor prefers every policy to the right of " + fmt(ps.lo) + " to the status quo." : fcmp(ps.lo, ZERO) < 0 ? " It runs past 0, so within the policy space the actor prefers every policy to the left of " + fmt(ps.hi) + " to the status quo." : "";
+          if (!asym) return "P(SQ) is every policy strictly between the two policies in I(SQ), so P(SQ) = " + setText(ps) + ". The ends are left out, because the actor is indifferent between them and the status quo." + past;
+          return "u(SQ) = " + ufmt(p, sq) + ". On the " + (left ? "right" : "left") + " side of the ideal point utility falls at rate " + (left ? "β = " + fmt(p.be) : "α = " + fmt(p.al)) + ", so it reaches " + ufmt(p, sq) + " at " + fmt(left ? ps.hi : ps.lo) + ". So P(SQ) = " + setText(ps) + ", which is not centered on the ideal point." + past;
+        },
+        wrongText: function (o) {
+          return (o.why === "closed" ? "The ends are in I(SQ), not P(SQ). The actor is indifferent between them and the status quo, so the preferred-to set leaves them out. " :
+            o.why === "half" || o.why === "otherhalf" ? "The actor also prefers some policies on the other side of the ideal point. " :
+            o.why === "aroundsq" ? "The preferred-to set is centered on the ideal point, not the status quo. " :
+            o.why === "symmetric" ? "That would be right with symmetric utility. Here utility falls at different rates on the two sides. " :
+            o.why === "swapped" ? "That uses α on the right and β on the left. α is the rate to the left of the ideal point, and β the rate to the right. " :
+            o.why === "centered" ? "With asymmetric utility the set isn’t centered on the ideal point. " : "") + "Find where the utility function is strictly above u(SQ) on each side of the ideal point.";
+        } });
+      /* 4. which proposals beat the status quo */
+      var props = c.props.map(dec), win = props.filter(function (x) { return prefers(p, x, sq) > 0; });
+      Q.push({ id: "m", multi: true, q: "Which of these proposals does the actor strictly prefer to the status quo?",
+        opts: props.map(function (x) { return { text: "p = " + fmt(x), v: fmt(x), right: prefers(p, x, sq) > 0 }; }),
+        rightText: function () {
+          return props.map(function (x) { var cc = prefers(p, x, sq); return "p = " + fmt(x) + " gives " + ufmt(p, x) + (cc > 0 ? ", higher than u(SQ), so yes." : cc < 0 ? ", lower than u(SQ), so no." : ", the same as u(SQ), so the actor is indifferent, and no."); }).join(" ");
+        },
+        wrongText: function () { return "Check each proposal against P(SQ) = " + setText(ps) + ", or compare its utility with u(SQ) = " + ufmt(p, sq) + ". A proposal at an end of the set gives the same utility as the status quo, so the actor doesn’t strictly prefer it."; } });
+      if (c.empty) Q.push({ id: "e", q: "Now suppose the status quo moves to " + fmt(z) + ", the actor’s ideal point. What is P(SQ)?",
+        opts: [{ text: "It is empty", right: true, v: "e" }, { text: "{" + fmt(z) + "}", v: "pt", why: "point" }, { text: "(0, 10)", v: "all", why: "all" }],
+        rightText: function () { return "No policy gives higher utility than the ideal point, so no policy is strictly preferred to the status quo, and P(SQ) is empty."; },
+        wrongText: function (o) { return o.why === "point" ? "The status quo isn’t preferred to itself, since the actor is indifferent. Is any policy strictly better than the ideal point?" : "Every other policy is farther from the ideal point, so the actor likes it less than the status quo. Is any policy strictly better?"; } });
+      return Q;
+    }
+    if (c.kind === "vote") {
+      var vs = D(c.vs), A = dec(c.A), B = dec(c.B), vp = { shape: c.vshape, al: dec(c.al || 1), be: dec(c.be || 1) }, as = c.vshape === "asym";
+      var cp = cutpoint(vp, A, B), mid = cutpoint({ shape: "lin" }, A, B), t = tally(vp, vs, A, B), tm = tally({ shape: "lin" }, vs, A, B);
+      var sv = vs.slice().sort(function (a, b) { return fcmp(a, b); }), poolc = [];
+      if (as) { poolc.push(numOpt(mid, "midpoint")); poolc.push(numOpt(cutpoint({ shape: "asym", al: vp.be, be: vp.al }, A, B), "swapped")); }
+      var mean = fdiv(vs.reduce(function (a, b) { return fadd(a, b); }, ZERO), F(vs.length));
+      poolc.push(numOpt(sv[(sv.length - 1) / 2], "median")); poolc.push(numOpt(fdiv(fsub(B, A), TWO), "halfdist")); poolc.push(numOpt(mean, "mean")); poolc.push(numOpt(fadd(A, B), "nohalf"));
+      poolc = poolc.filter(function (o) { return o.key >= 0 && o.key <= 10; });
+      Q.push({ id: "c", q: as ? "What is the cutpoint between the voters who prefer A and those who prefer B?" : "What is the midpoint between A and B?",
+        opts: pick(numOpt(cp, "right"), poolc), num: true,
+        rightText: function () { return as ? "A voter between the alternatives is indifferent when −" + fmt(vp.al) + "(z − " + fmt(A) + ") = −" + fmt(vp.be) + "(" + fmt(B) + " − z), which gives z = (αA + βB) / (α + β) = (" + fmt(vp.al) + " × " + fmt(A) + " + " + fmt(vp.be) + " × " + fmt(B) + ") / " + fmt(fadd(vp.al, vp.be)) + " = " + fmt(cp) + ". The midpoint, " + fmt(mid) + ", is no longer the cutpoint." : "(" + fmt(A) + " + " + fmt(B) + ") / 2 = " + fmt(cp) + "."; },
+        wrongText: function (o) {
+          return (o.why === "nohalf" ? "Divide the sum by 2. " : o.why === "halfdist" ? "That’s half the distance between A and B, not the point halfway between them. " : o.why === "median" || o.why === "mean" ? "That’s the " + o.why + " of the voters’ ideal points. The " + (as ? "cutpoint" : "midpoint") + " depends on where A and B are, not on the voters. " :
+            o.why === "midpoint" ? "That’s the midpoint, which is the cutpoint only with symmetric utility. " : o.why === "swapped" ? "That swaps α and β. α is the rate to the left of an ideal point, and it applies to A, the alternative on the left. " : "") +
+            (as ? "Set a voter’s utility from A equal to their utility from B, and solve for the ideal point." : "Add the two positions and divide by 2.");
+        } });
+      var ask = c.ask, other = ask === "A" ? "B" : "A", nRight = t[ask].length;
+      var pooln = [t[ask].length + t["0"].length, tm[ask].length, t[other].length, nRight - 1, nRight + 1, nRight - 2, nRight + 2].map(function (x, i) { return { text: String(x), key: x, why: ["indiff", "midpoint", "other", "off", "off", "off", "off"][i] }; })
+        .filter(function (o) { return o.key >= 0 && o.key <= vs.length; });
+      Q.push({ id: "n", q: "How many voters prefer " + ask + "?", opts: pick({ text: String(nRight), key: nRight, why: "right" }, pooln), num: true,
+        rightText: function () { return "The voters at " + listNums(t[ask]) + " prefer " + ask + "." + (t["0"].length ? " The voter at " + listNums(t["0"]) + " is exactly at the " + (as ? "cutpoint" : "midpoint") + ", so is indifferent." : ""); },
+        wrongText: function (o) {
+          return (o.why === "other" ? "That’s how many prefer " + other + ". " : o.why === "indiff" ? "A voter exactly at the " + (as ? "cutpoint" : "midpoint") + " is indifferent, so doesn’t prefer either. " : o.why === "midpoint" && as ? "That splits the voters at the midpoint. With asymmetric utility, use the cutpoint. " : "") +
+            "Voters strictly on " + ask + "’s side of the " + (as ? "cutpoint, " : "midpoint, ") + fmt(cp) + ", prefer " + ask + ".";
+        } });
+      var res = resultOf(t), cat = res.winner ? res.winner : res.coins ? "coin" : "tie";
+      Q.push({ id: "w", q: "Under majority rule, what is the result?",
+        opts: [{ v: "A", text: "A wins" }, { v: "B", text: "B wins" }, { v: "tie", text: "A tie that majority rule can’t break, with no indifferent voters" }, { v: "coin", text: "The indifferent voter’s coin toss decides" }].map(function (o) { return { v: o.v, text: o.text, right: o.v === cat }; }),
+        rightText: function () { return res.text + "."; },
+        wrongText: function () { return "Count the voters who prefer A, those who prefer B, and any who are indifferent. An indifferent voter tosses a coin. Can the coin change who wins?"; } });
+      return Q;
+    }
+    /* the Pareto set */
+    var pv = D(c.vs), par = paretoSet(pv), from = dec(c.from), mv = c.moves.map(dec);
+    var sp = pv.slice().sort(function (a, b) { return fcmp(a, b); });
+    var poolP = [ivOpt(par.lo, par.hi, "open"), ivOpt(sp[1], sp[sp.length - 2], "inner", true), ivOpt(ZERO, F(10), "all", true), ivOpt(sp[(sp.length - 1) / 2], sp[(sp.length - 1) / 2], "median", true)];
+    Q.push({ id: "ps", q: "What is the Pareto set?", opts: pick(ivOpt(par.lo, par.hi, "right", true), poolP), num: true, set: true,
+      rightText: function () { return "In one dimension with single-peaked preferences, the Pareto set is the closed interval from the leftmost to the rightmost ideal point, [" + fmt(par.lo) + ", " + fmt(par.hi) + "]. Its ends are in the set, because moving away from either end makes the voter there worse off."; },
+      wrongText: function (o) { return (o.why === "open" ? "The ends belong in the set. At " + fmt(par.lo) + ", any move hurts the voter there. " : o.why === "inner" ? "The voters at the ends count too. " : o.why === "median" ? "That’s the median. A policy can be Pareto efficient without being the median. " : o.why === "all" ? "Policies outside the voters’ ideal points can be improved for everyone. " : "") + "Which policies can’t be moved without making some voter worse off?"; } });
+    var good = mv.filter(function (y) { var e = moveEffects(pv, from, y); return !e.worse.length && e.better.length; });
+    Q.push({ id: "mv", multi: true, q: "Policy is at " + fmt(from) + ". Which of these moves are Pareto improvements?",
+      opts: mv.map(function (y) { var e = moveEffects(pv, from, y); return { text: "Move to " + fmt(y), v: fmt(y), right: !e.worse.length && e.better.length > 0 }; }),
+      rightText: function () { return mv.map(function (y) { var e = moveEffects(pv, from, y); return "A move to " + fmt(y) + (e.worse.length ? " makes the voter" + (e.worse.length > 1 ? "s" : "") + " at " + listNums(e.worse) + " worse off, so no." : " makes " + (e.better.length === pv.length ? "every voter" : "the voters at " + listNums(e.better)) + " strictly better off and nobody worse off, so yes."); }).join(" "); },
+      wrongText: function () { return "A move is a Pareto improvement if it makes at least one voter strictly better off and no voter worse off. For each move, check whether it takes policy farther from any voter’s ideal point."; } });
+    c.eff.forEach(function (x, i) {
+      var xf = dec(x), inside = fcmp(xf, par.lo) >= 0 && fcmp(xf, par.hi) <= 0;
+      Q.push({ id: "ef" + i, q: "Is a policy of " + fmt(xf) + " Pareto efficient?",
+        opts: [{ v: "y", text: "Yes. No move can make some voter better off without making another worse off.", right: inside }, { v: "n", text: "No. Some move makes at least one voter better off and nobody worse off.", right: !inside }],
+        rightText: function () { return inside ? fmt(xf) + " is in the Pareto set. Moving right hurts the voter" + (pv.filter(function (z) { return fcmp(z, xf) <= 0; }).length > 1 ? "s" : "") + " at " + listNums(pv.filter(function (z) { return fcmp(z, xf) <= 0; })) + ", and moving left hurts the voter" + (pv.filter(function (z) { return fcmp(z, xf) >= 0; }).length > 1 ? "s" : "") + " at " + listNums(pv.filter(function (z) { return fcmp(z, xf) >= 0; })) + "." :
+          fmt(xf) + " is outside the Pareto set. Moving it to " + fmt(fcmp(xf, par.lo) < 0 ? par.lo : par.hi) + " brings it closer to every voter’s ideal point, which is a Pareto improvement."; },
+        wrongText: function () { return "Is " + fmt(xf) + " between the leftmost and rightmost ideal points? If not, which move would help every voter?"; } });
+    });
+    return Q;
+  }
+  P_CASES.forEach(function (c) { c.qs = buildQs(c); });
+
+  /* ----- what the figure shows at each point in a case ----- */
+  var pc = null, pStep = 0, pFirst = true, pDone = {}, pStats = { done: 0, clean: 0 }, pSel = {};
+  function caseState(c) {
+    var s = { z: dec(c.z || 0), shape: c.shape, al: dec(c.al || 1), be: dec(c.be || 1), h: dec(0.5), cap: F(4) };
+    if (c.kind === "one") { s.sq = dec(c.sq); s.prop = null; }
+    if (c.kind === "vote") { s.voters = D(c.vs); s.A = dec(c.A); s.B = dec(c.B); s.vshape = c.vshape; }
+    if (c.kind === "pareto") { s.voters = D(c.vs); s.vshape = "lin"; s.px = dec(c.from); }
+    return s;
+  }
+  function pDone_(id) { var q = pc.qs; for (var i = 0; i < q.length; i++) if (q[i].id === id) return i < pStep; return false; }
+  function pScene() {
+    var c = pc, s = caseState(c), sh;
+    if (c.kind === "one") {
+      sh = { ideal: true, sq: true };
+      if (pDone_("u")) { sh.curve = true; sh.marks = function (st) { return [{ x: st.sq, lab: "SQ" }]; }; }
+      if (pDone_(c.shape === "asym" ? "u" : "i")) { sh.level = true; sh.marks = null; }
+      if (pDone_("p")) sh.pset = true;
+      var sc = sceneFor({ show: sh }, s), sub = c.shape === "asym" ? "Asymmetric utility, α = " + fmt(s.al) + " and β = " + fmt(s.be) + "." : fnText(actorP(s)) + ".";
+      return { sc: sc, sub: sub };
+    }
+    if (c.kind === "vote") {
+      sh = { voters: true, alts: true, cut: pDone_("c"), ghostMid: pDone_("c"), color: pDone_("n"), bands: pDone_("n") };
+      return { sc: sceneFor({ show: sh }, s), sub: c.vshape === "asym" ? "Every voter has α = " + fmt(s.al) + " and β = " + fmt(s.be) + "." : "Every voter has symmetric utility." };
+    }
+    sh = { voters: true, pareto: pDone_("ps"), px: true };
+    return { sc: sceneFor({ show: sh }, s), sub: "The policy is at " + fmt(s.px) + "." };
+  }
+  function renderPractice() {
+    var c = pc;
+    buildPPicker();
+    $("pCaseTitle").textContent = "Case " + c.id;
+    var grp = P_GROUPS.filter(function (g) { return g.id === c.group; })[0];
+    $("pCaseGroup").textContent = grp.label + (grp.desc ? (/[?.]$/.test(grp.label) ? " " : ". ") + grp.desc : "");
+    var setup = "";
+    if (c.kind === "rank") setup = "An actor ranks five " + c.what + ", which lie in this order along a line: " + c.alts.join(", ") + ". Each question gives a different ranking.";
+    if (c.kind === "one") { var p = pActor(c), fp = fnText(p).split(", "); setup = "An actor has an ideal point of " + fmt(p.z) + " and " + (c.shape === "asym" ? "asymmetric utility. Utility falls at rate α = " + fmt(p.al) + " to the left of the ideal point and β = " + fmt(p.be) + " to the right." : (c.shape === "sqrt" ? "square-root" : fp[0].toLowerCase()) + " utility, " + fp[1] + ".") + " The status quo is " + fmt(dec(c.sq)) + "."; }
+    if (c.kind === "vote") setup = cap(voterWord(c.vs.length)) + " have ideal points at " + listNums(D(c.vs)) + ". They choose between A = " + fmt(dec(c.A)) + " and B = " + fmt(dec(c.B)) + " by majority rule, and each votes for the alternative they prefer. An indifferent voter tosses a coin." + (c.vshape === "asym" ? " Every voter has asymmetric utility, with α = " + fmt(dec(c.al)) + " to the left of their ideal point and β = " + fmt(dec(c.be)) + " to the right." : " Every voter has symmetric utility.");
+    if (c.kind === "pareto") setup = cap(voterWord(c.vs.length)) + " have ideal points at " + listNums(D(c.vs)) + ", with symmetric utility.";
+    $("pSetup").textContent = setup;
+    /* the figure */
+    $("figCard").hidden = c.kind === "rank"; $("wsCard").hidden = true;
+    if (c.kind !== "rank") { var sc = pScene(); draw(sc.sc, sc.sub); }
+    /* the questions so far */
+    var host = $("pQs"); host.innerHTML = "";
+    c.qs.forEach(function (q, i) {
+      if (i > pStep) return;
+      var box = document.createElement("div"); box.className = "task"; box.id = "pq" + i;
+      var h = document.createElement("p"); h.className = "task-q"; h.textContent = (i + 1) + ". " + q.q; box.appendChild(h);
+      if (q.table) { var tb = document.createElement("div"); tb.innerHTML = q.table; box.appendChild(tb); }
+      if (q.multi) { var n = document.createElement("p"); n.className = "cnote"; n.textContent = "Select every one that applies, or “None of them.”"; box.appendChild(n); }
+      var os = document.createElement("div"); os.className = "opts"; os.setAttribute("role", "group"); os.setAttribute("aria-label", "Options for question " + (i + 1));
+      var opts = q.multi ? q.opts.concat([{ text: "None of them", v: "none", right: !q.opts.some(function (o) { return o.right; }) }]) : q.opts;
+      opts.forEach(function (o, k) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "opt" + (q.num ? " num" : ""); b.textContent = o.text;
+        b.setAttribute("data-k", String(k));
+        if (i < pStep) { b.setAttribute("aria-disabled", "true"); if (q.multi ? o.right : o.right) b.classList.add("chosen"); }
+        else if (q.multi) b.setAttribute("aria-pressed", pSel[k] ? "true" : "false");
+        b.addEventListener("click", function () { pAnswer(i, k); });
+        os.appendChild(b);
+      });
+      box.appendChild(os);
+      if (q.multi && i === pStep) { var nav = document.createElement("div"); nav.className = "nav"; var cb = document.createElement("button"); cb.type = "button"; cb.className = "btn primary"; cb.textContent = "Check"; cb.addEventListener("click", function () { pCheckMulti(i); }); nav.appendChild(cb); box.appendChild(nav); }
+      var f = document.createElement("div"); f.id = "pf" + i; box.appendChild(f);
+      if (i < pStep) pNote(f, true, "Right.", q.rightText());
+      host.appendChild(box);
+    });
+    var done = pStep >= c.qs.length;
+    $("pDoneBox").hidden = !done; $("pNext").hidden = !done;
+    if (done) $("pDoneBox").innerHTML = "<p>That’s Case " + c.id + " finished." + (pFirst ? " Every answer was right the first time." : " Finish a case with every answer right the first time to mark it with a check.") + "</p>";
+    $("pScore").textContent = pStats.done === 0 ? "No cases finished yet." : pStats.done + (pStats.done === 1 ? " case" : " cases") + " finished, " + pStats.clean + " with every answer right the first time.";
+  }
+  function pNote(el, ok, head, text) {
+    el.innerHTML = "";
+    var d = document.createElement("div"); d.className = "result-note " + (ok ? "ok" : "no");
+    var h = document.createElement("span"); h.className = "head"; h.textContent = (ok ? "✓ " : "✕ ") + head + " ";
+    d.appendChild(h); d.appendChild(document.createTextNode(text)); el.appendChild(d);
+  }
+  function pAdvance() {
+    pStep++; pSel = {};
+    if (pStep >= pc.qs.length) { pStats.done++; if (pFirst) { pStats.clean++; pDone[pc.id] = true; } }
+    renderPractice();
+    var q = pc.qs[pStep - 1];
+    say("Right. " + q.rightText());
+    if (pStep < pc.qs.length) { var nx = $("pq" + pStep); if (nx) nx.querySelector(".task-q").setAttribute("tabindex", "-1"); }
+    if (pc.kind !== "rank") bring("fig");
+  }
+  function pAnswer(i, k) {
+    if (i !== pStep) return;
+    var q = pc.qs[i];
+    if (q.multi) {
+      var noneK = q.opts.length;
+      if (k === noneK) pSel = pSel[noneK] ? {} : (function () { var o = {}; o[noneK] = true; return o; })();
+      else { delete pSel[noneK]; if (pSel[k]) delete pSel[k]; else pSel[k] = true; }
+      $("pq" + i).querySelectorAll(".opt").forEach(function (b, j) { b.setAttribute("aria-pressed", pSel[j] ? "true" : "false"); });
+      return;
+    }
+    var o = q.opts[k];
+    if (o.right) { pAdvance(); return; }
+    pFirst = false;
+    var m = q.wrongText(o) + " Try again.";
+    pNote($("pf" + i), false, "Not that one.", m); say("Not that one. " + m);
+  }
+  function pCheckMulti(i) {
+    if (i !== pStep) return;
+    var q = pc.qs[i], noneK = q.opts.length, want = {};
+    q.opts.forEach(function (o, k) { if (o.right) want[k] = true; });
+    if (!Object.keys(want).length) want[noneK] = true;
+    var chosen = Object.keys(pSel);
+    if (!chosen.length) { pNote($("pf" + i), false, "Nothing selected.", "Select every one that applies, or “None of them.”"); say("Nothing selected."); return; }
+    var ok = chosen.length === Object.keys(want).length && chosen.every(function (k) { return want[k]; });
+    if (ok) { pAdvance(); return; }
+    pFirst = false;
+    var m = q.wrongText() + " Try again.";
+    pNote($("pf" + i), false, "Not quite.", m); say("Not quite. " + m);
+  }
+  function selectPCase(id, move) {
+    pc = P_CASES.filter(function (c) { return c.id === id; })[0]; pStep = 0; pFirst = true; pSel = {};
+    renderPractice();
+    if (move) { var h = $("pCaseHead"), r = h.getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) h.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" }); }
+  }
+  function buildPPicker() {
+    var host = $("pPicker"); host.innerHTML = "";
+    P_GROUPS.forEach(function (g) {
+      var wrap = document.createElement("div"); wrap.className = "pick-row";
+      var lab = document.createElement("span"); lab.className = "pick-label"; lab.id = "pg-" + g.id; lab.textContent = g.label; wrap.appendChild(lab);
+      var row = document.createElement("div"); row.className = "chips"; row.setAttribute("role", "group"); row.setAttribute("aria-labelledby", lab.id);
+      P_CASES.filter(function (c) { return c.group === g.id; }).forEach(function (c) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "chip small";
+        b.setAttribute("aria-pressed", pc && pc.id === c.id ? "true" : "false");
+        b.appendChild(document.createTextNode("Case " + c.id));
+        if (pDone[c.id]) { var m = document.createElement("span"); m.className = "done-mark"; m.textContent = "✓"; m.setAttribute("aria-hidden", "true"); b.appendChild(m); b.setAttribute("aria-label", "Case " + c.id + ", finished"); }
+        b.addEventListener("click", function () { selectPCase(c.id, true); say("Case " + c.id + ". " + $("pSetup").textContent); $("pCaseTitle").focus({ preventScroll: true }); });
+        row.appendChild(b);
+      });
+      wrap.appendChild(row); host.appendChild(wrap);
+    });
+  }
+  $("pNext").addEventListener("click", function () {
+    var i = P_CASES.indexOf(pc); selectPCase(P_CASES[(i + 1) % P_CASES.length].id, false);
+    $("practiceTitle").focus({ preventScroll: true }); say("Case " + pc.id + ". " + $("pSetup").textContent);
+  });
+
+  /* ================= modes and theme ================= */
+
+  var mode = "guided", TABS = ["guided", "explore", "practice"];
+  function selectMode(m, focusTab) {
+    mode = m;
+    TABS.forEach(function (t) {
+      var tab = $("tab-" + t);
+      tab.setAttribute("aria-selected", t === m ? "true" : "false");
+      tab.tabIndex = t === m ? 0 : -1;
+      $(t + "Panel").hidden = t !== m;
+    });
+    movedAway = false; backBtn.hidden = true;
+    $("figCard").hidden = false; $("wsCard").hidden = m === "practice";
+    document.querySelector(".board").classList.toggle("pin-fig", m === "practice");
+    if (m !== "guided") $("stepCtrl").innerHTML = "";
+    if (m === "guided") renderGuided();
+    else if (m === "explore") renderExplore(false);
+    else if (!pc) selectPCase("1", false); else renderPractice();
+    if (focusTab) $("tab-" + m).focus();
+    say(m === "guided" ? "Guided walkthrough, step " + (step + 1) + "." : m === "explore" ? "Explore mode." : "Practice.");
+  }
+  TABS.forEach(function (t) { $("tab-" + t).addEventListener("click", function () { selectMode(t, false); }); });
+  $("tabs").addEventListener("keydown", function (e) {
+    var i = TABS.indexOf(mode), next = null;
+    if (e.key === "ArrowRight") next = TABS[(i + 1) % 3];
+    else if (e.key === "ArrowLeft") next = TABS[(i + 2) % 3];
+    else if (e.key === "Home") next = TABS[0];
+    else if (e.key === "End") next = TABS[2];
+    if (next) { e.preventDefault(); selectMode(next, true); }
+  });
+
+  var themeBtn = $("themeToggle");
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    themeBtn.textContent = t === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  }
+  applyTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  themeBtn.addEventListener("click", function () {
+    applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+
+  /* test hook for automated checks; harmless in use */
+  window.__w1a = { F: F, dec: dec, fmt: fmt, util: util, pset: pset, indiffSet: indiffSet, vote: vote, tally: tally, cutpoint: cutpoint, paretoSet: paretoSet,
+                   STEPS: STEPS, cloneState: cloneState, sceneFor: sceneFor, WS: WS, goStep: function (i) { var p = step; step = i; renderGuided(p); },
+                   setState: function (k, v) { gs[k] = v; refresh(false); }, state: function () { return gs; },
+                   explore: { one: eo, many: ev, show: eShow, presets: E_PRESETS, view: function (v) { eView = v; renderExplore(false); }, render: function () { renderExplore(false); },
+                              read: function () { return $("eRead").textContent; } },
+                   practice: { cases: P_CASES, select: function (id) { selectPCase(id, false); }, answer: function (i, k) { pAnswer(i, k); }, check: function (i) { pCheckMulti(i); },
+                               step: function () { return pStep; }, first: function () { return pFirst; }, rankClass: rankClass } };
+
+  renderGuided();
+})();
+</script>
+</body>
+</html>
